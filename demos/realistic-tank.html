@@ -1453,7 +1453,9 @@
     if (packListed) return;
     packListed = true;
     FishThumbs.withPack(function (idx) {
-      var list = idx.__list || [];
+      // Только виды с листом раскраски: набор и раскраски — один и тот же
+      // зоопарк, иначе ребёнок видит в аквариуме рыбу, которую не раскрасить.
+      var list = (idx.__list || []).filter(function (m) { return m.sheet; });
       packGrid.textContent = '';
       if (!list.length) {
         packGrid.innerHTML = '<p class="who">Набор не собран — запусти tools\\convert-pack.ps1</p>';

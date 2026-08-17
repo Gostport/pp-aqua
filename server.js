@@ -178,11 +178,28 @@ function publicMeta(m) {
 // меняется только при пересборке, а кэш пришлось бы сбрасывать руками.
 const PACK_FILE = path.join(ROOT, 'assets', 'models', 'pack', 'pack.json');
 
+// Виды, у которых есть лист раскраски. Список один на весь проект —
+// манифест раскрасок; дублировать его тут нельзя, иначе однажды разойдётся.
+const SHEET_FILE = path.join(ROOT, 'assets', 'coloring', 'manifest.json');
+
+function sheetKinds() {
+  try {
+    const m = JSON.parse(fs.readFileSync(SHEET_FILE, 'utf8').replace(/^﻿/, ''));
+    return new Set((m.fish || []).map((f) => f.name));
+  } catch (e) { return new Set(); }
+}
+
 function listPack() {
   try {
     const raw = fs.readFileSync(PACK_FILE, 'utf8').replace(/^﻿/, '');
     const list = JSON.parse(raw);
-    return Array.isArray(list) ? list : [];
+    if (!Array.isArray(list)) return [];
+    // sheet — есть ли у вида лист раскраски. Меню аквариума показывает только
+    // такие: «готовая рыбка» должна быть той же, какую можно раскрасить.
+    // Остальные из списка не убираем: на них ссылаются рыбки, запущенные
+    // раньше, и без них они пропали бы из аквариума.
+    const kinds = sheetKinds();
+    return list.map((m) => Object.assign({}, m, { sheet: kinds.has(m.name) }));
   } catch (e) { return []; }
 }
 
