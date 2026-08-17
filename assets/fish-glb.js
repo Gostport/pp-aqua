@@ -67,7 +67,10 @@
       box: box, size: size, center: center,
       body: body, up: up, lat: lat,
       headAtMax: thickHigh > thickLow,
-      dorsalPositive: centroid[up] < center[up]
+      // Правило «где спина» общее — в FishFrame. Третья копия этой строки
+      // жила здесь и разошлась бы с остальными так же тихо, как разошлась
+      // копия в сцене: спинорог плавал кверху брюхом только в аквариуме.
+      dorsalPositive: FishFrame.dorsalPositive(up, centroid, center)
     };
   }
 
