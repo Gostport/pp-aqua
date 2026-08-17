@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мои аквариумы</title>
+<style>
+  :root {
+    --ink: #eaf6ff;
+    --muted: #8aa6bd;
+    --dim: #5f7c94;
+    --card: rgba(9, 24, 40, 0.72);
+    --line: rgba(140, 200, 255, 0.16);
+    --accent: #58d6ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 800px at 20% -10%, #0d4a6b 0%, transparent 60%),
+      radial-gradient(900px 700px at 90% 10%, #0a3a5c 0%, transparent 55%),
+      linear-gradient(180deg, #051624 0%, #030d17 100%);
+    background-attachment: fixed;
+    color: var(--ink);
+    font: 15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(
+      100deg, transparent 0 60px,
+      rgba(140, 220, 255, 0.035) 60px 90px,
+      transparent 90px 190px);
+    mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+    animation: drift 22s ease-in-out infinite alternate;
+  }
+  @keyframes drift { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
+
+  .wrap { max-width: 980px; margin: 0 auto; padding: 64px 24px 80px; position: relative; }
+
+  /* Заголовок и ввод кода стоят рядом: код нужен редко, и внизу страницы
+     его никто не искал, а места справа от заголовка всё равно пустовало. */
+  .head {
+    display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap;
+    margin-bottom: 36px;
+  }
+  header { flex: 1 1 340px; }
+  h1 { margin: 0 0 12px; font-size: clamp(30px, 5vw, 48px); line-height: 1.05; font-weight: 650; letter-spacing: -0.5px; }
+  header p { margin: 0; color: var(--muted); font-size: 16.5px; max-width: 620px; }
+
+  .tanks { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; margin-bottom: 32px; }
+
+  .tank {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    overflow: hidden; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    display: flex; flex-direction: column;
+    color: var(--ink); text-decoration: none;
+    transition: transform .2s cubic-bezier(.2,.7,.2,1), border-color .2s, box-shadow .2s;
+  }
+  .tank:hover { transform: translateY(-3px); border-color: rgba(88,214,255,.45); box-shadow: 0 20px 54px rgba(0,20,40,.5); }
+
+  /* Окошко в аквариум. Снимок делает сама сцена, когда там что-то меняется;
+     пока его нет — показываем фон аквариума, он известен всегда. */
+  .tank .shot {
+    position: relative; aspect-ratio: 16 / 9; background: #0a1c2b;
+    display: block; overflow: hidden;
+  }
+  .tank .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tank .shot .veil {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, transparent 45%, rgba(6,18,30,.85) 100%);
+  }
+  /* Заглушка, пока ни снимка, ни фона: аквариум пустой и ещё не открывался */
+  .tank .shot .none {
+    position: absolute; inset: 0; display: grid; place-content: center; gap: 6px;
+    color: var(--dim); font-size: 13px; text-align: center;
+  }
+  .tank .shot .none .big { font-size: 30px; line-height: 1; }
+  .tank .shot .fade { opacity: 0; transition: opacity .35s }
+  .tank .shot .fade.on { opacity: 1 }
+
+  .tank .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 3px; }
+  .tank h2 { margin: 0; font-size: 18px; font-weight: 620; letter-spacing: -.2px; }
+  .tank .meta { color: var(--muted); font-size: 13px; }
+  .tank .meta code {
+    color: var(--dim); font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 12px; letter-spacing: .5px;
+  }
+
+  /* Удаление — крестик в углу картинки, как у плиток фона в админке:
+     в ряду кнопок он занимал место и притягивал взгляд сильнее «Открыть».
+     Виден всегда, только приглушённо: на телефоне наведения нет, и всплывающий
+     по нему крестик стоил бы лишнего тапа — первый показывал бы кнопку,
+     и только второй открывал аквариум. */
+  .tank .kill {
+    position: absolute; top: 10px; right: 10px; z-index: 1;
+    width: 28px; height: 28px; border-radius: 50%; padding: 0;
+    border: 1px solid rgba(140,200,255,.25); background: rgba(4,16,28,.72);
+    color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer;
+    display: grid; place-content: center; opacity: .5;
+    backdrop-filter: blur(4px); transition: opacity .15s, background .15s, color .15s;
+  }
+  .tank:hover .kill, .tank .kill:focus-visible { opacity: 1 }
+  .tank .kill:hover { background: #4a1d24; color: #ff9aa6; border-color: #7a2b36 }
+
+  /* Осталась одна кнопка на странице — «Открыть» под полем ввода кода. */
+  button.btn {
+    appearance: none; cursor: pointer; font: inherit; font-size: 13.5px;
+    text-align: center;
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px;
+    background: rgba(88, 214, 255, .08); color: var(--ink);
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  button.btn:hover { background: rgba(88, 214, 255, .18); border-color: rgba(140, 200, 255, .45); }
+
+  .newtank {
+    border: 1.5px dashed var(--line); border-radius: 18px;
+    display: grid; place-content: center; gap: 6px; text-align: center;
+    color: var(--muted); cursor: pointer; background: transparent;
+    font: inherit; padding: 34px 20px; min-height: 200px;
+    transition: border-color .15s, color .15s;
+  }
+  .newtank:hover { border-color: var(--accent); color: var(--accent); }
+  .newtank .plus { font-size: 30px; line-height: 1; }
+
+  .empty { color: var(--muted); padding: 10px 0 26px; }
+
+  .bycode {
+    flex: 0 1 330px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 16px 18px;
+  }
+  .bycode h3 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+  .bycode p { margin: 0 0 12px; color: var(--muted); font-size: 12.5px; }
+  .bycode form { display: flex; gap: 10px; flex-wrap: wrap; }
+  .bycode input {
+    flex: 1; min-width: 150px; font: inherit; font-size: 13.5px;
+    letter-spacing: 2px; font-family: ui-monospace, Consolas, monospace;
+    background: rgba(4,16,28,.6); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px;
+  }
+  .bycode input:focus { outline: none; border-color: var(--accent); }
+
+  footer { padding-top: 24px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13px; }
+  footer a { color: var(--muted); }
+  footer code {
+    background: rgba(140,200,255,.08); border: 1px solid var(--line);
+    border-radius: 5px; padding: 2px 7px; color: var(--muted);
+    font-family: ui-monospace, Consolas, monospace; font-size: 12.5px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <header>
+      <h1>Мои аквариумы</h1>
+      <p>Распечатай шаблон, раскрась фломастерами, сфотографируй — и рыбка поплывёт.
+         У каждого ребёнка может быть свой аквариум.</p>
+    </header>
+
+    <div class="bycode">
+      <h3>Открыть аквариум по коду</h3>
+      <p>Код нужен только на новом устройстве — на этом аквариумы запоминаются сами.</p>
+      <form id="code-form">
+        <input id="code" placeholder="например, q9r3j3czwh" autocomplete="off" spellcheck="false" maxlength="10">
+        <button class="btn" type="submit">Открыть</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="empty" id="empty" hidden>Пока ни одного аквариума. Создай первый — это займёт секунду.</div>
+  <div class="tanks" id="tanks"></div>
+
+  <footer>
+    <p style="margin:0"><b style="color:var(--ink)">Важно.</b> Аккаунтов нет. По коду аквариум смотрят —
+    его можно давать кому угодно. По паролю им управляют: меняют фон, имя, удаляют рыбок и сам аквариум.
+    Список хранится в этом браузере, так что если почистить его данные, аквариумы найдутся только по коду,
+    а управление — только по паролю. Сохрани и то, и другое: восстановить их негде.</p>
+  </footer>
+
+</div>
+
+<script src="/assets/modal.js"></script>
+<script src="/assets/tank.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var box = document.getElementById('tanks');
+  var empty = document.getElementById('empty');
+
+  // Карточка целиком — ссылка в аквариум. Отдельных кнопок нет: «Открыть»
+  // дублировало нажатие на саму карточку, а управление живёт в меню
+  // аквариума, рядом с тем, чем управляют.
+  function card(meta) {
+    var el = document.createElement('a');
+    el.className = 'tank';
+    el.href = '/t/' + meta.id;
+    el.innerHTML =
+      '<div class="shot">' +
+        '<div class="none"><span class="big">🫧</span><span>тут пока пусто</span></div>' +
+        '<div class="veil"></div>' +
+        '<button class="kill" title="Удалить аквариум">✕</button>' +
+      '</div>' +
+      '<div class="body">' +
+        '<h2></h2>' +
+        '<div class="meta"></div>' +
+      '</div>';
+
+    el.querySelector('h2').textContent = meta.name;
+    var m = el.querySelector('.meta');
+    m.textContent = fishWord(meta.fishCount) + ' · ';
+    var code = document.createElement('code');
+    code.textContent = meta.id;
+    m.appendChild(code);
+
+    var shot = el.querySelector('.shot');
+
+    // Снимок сцены, а если его ещё не делали — хотя бы фон аквариума.
+    // Появляется плавно: подстановка готовой картинки рывком выглядит дёшево.
+    var pic = meta.preview || meta.backgroundUrl;
+    if (pic) {
+      // Заглушку убираем совсем: она лежит поверх картинки и иначе
+      // просвечивала бы сквозь неё.
+      shot.querySelector('.none').remove();
+      var img = document.createElement('img');
+      img.className = 'fade';
+      img.alt = '';
+      img.loading = 'lazy';
+      img.onload = function () { img.classList.add('on'); };
+      img.src = pic;
+      shot.insertBefore(img, shot.firstChild);
+    }
+
+    el.querySelector('button.kill').onclick = function (e) {
+      e.preventDefault();      // крестик лежит внутри ссылки на аквариум
+      e.stopPropagation();
+      // Два разных действия за одним крестиком. Аквариум, открытый по коду,
+      // чужой: убрать его из своего списка человек вправе всегда, а удалить
+      // насовсем — только с паролем. Раньше было одно «Удалить», и чужой
+      // аквариум оставался в списке навсегда.
+      Modal.choose({
+        title: 'Убрать «' + meta.name + '»?',
+        text: 'Из списка — аквариум останется на сервере, вернёшь его по коду ' + meta.id + '. ' +
+              'Совсем — ' + (meta.fishCount ? fishWord(meta.fishCount) + ' уедут' : 'аквариум уедет') +
+              ' в корзину на сервере, и по коду он больше не откроется.',
+        image: pic,
+        caption: meta.name,
+        buttons: [
+          { label: 'Отмена', value: null },
+          { label: 'Убрать из моего списка', value: 'forget' },
+          { label: 'Удалить аквариум совсем', value: 'delete', kind: 'danger' }
+        ]
+      }).then(function (what) {
+        if (!what) return;
+        if (what === 'forget') { Tank.forget(meta.id); render(); return; }
+
+        // Удаление — под паролем. Если его тут не знают (открыли по коду
+        // на чужом устройстве), спрашиваем и пробуем ещё раз.
+        var kill = function () {
+          return Tank.send('/api/t/' + meta.id, { method: 'DELETE', tank: meta.id });
+        };
+        kill().then(function (r) {
+          if (r.ok) return true;
+          if (r.status !== 401 && r.status !== 429) return false;
+          return Tank.askPass(meta.id, {
+            title: 'Пароль от «' + meta.name + '»',
+            text: 'Удалить аквариум совсем можно только с паролем. Если пароля нет — ' +
+                  'убери аквариум из своего списка, он останется у хозяина.'
+          }).then(function (got) {
+            return got ? kill().then(function (r2) { return r2.ok; }) : false;
+          });
+        }, function () { return false; })
+          .then(function (done) { if (done) { Tank.forget(meta.id); } render(); });
+      });
+    };
+    return el;
+  }
+
+  function fishWord(n) {
+    if (!n) return 'пока пусто';
+    var t = n % 10, h = n % 100;
+    var w = (t === 1 && h !== 11) ? 'рыбка'
+          : (t >= 2 && t <= 4 && (h < 12 || h > 14)) ? 'рыбки'
+          : 'рыбок';
+    return n + ' ' + w;
+  }
+
+  function newTankTile() {
+    var b = document.createElement('button');
+    b.className = 'newtank';
+    b.innerHTML = '<span class="plus">+</span><span>Новый аквариум</span>';
+    b.onclick = function () {
+      Modal.prompt({
+        title: 'Новый аквариум',
+        text: 'Назови, чтобы отличать в списке — например, по имени ребёнка.',
+        value: 'Аквариум',
+        maxLength: 60,
+        confirmLabel: 'Создать'
+      }).then(function (name) {
+        if (name === null) return;
+        b.disabled = true;
+        return fetch('/api/tanks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (meta) {
+            Tank.remember(meta.id);
+            // Пароль сервер показывает один раз. На этом устройстве он
+            // остаётся в браузере, так что переспрашивать его тут не будут —
+            // а вот на телефоне или у второго родителя без него не обойтись.
+            Tank.setPass(meta.id, meta.password);
+            return Modal.alert({
+              title: 'Аквариум создан',
+              text: 'Сохрани код и пароль. По коду аквариум открывают и смотрят, ' +
+                    'по паролю им управляют. Восстановить их будет негде — ни почты, ни аккаунта тут нет.',
+              fields: [
+                { label: 'Код аквариума', value: meta.id },
+                { label: 'Пароль', value: meta.password }
+              ],
+              okLabel: 'Сохранил, поплыли'
+            }).then(function () { location.href = '/t/' + meta.id; });
+          })
+          .catch(function () {
+            b.disabled = false;
+            Modal.alert({
+              title: 'Аквариум не создался',
+              text: 'Похоже, сервер не отвечает. Проверь, запущен ли node server.js.'
+            });
+          });
+      });
+    };
+    return b;
+  }
+
+  function render() {
+    var ids = Tank.known();
+    box.textContent = '';
+    empty.hidden = ids.length > 0;
+
+    // Каждый аквариум спрашиваем отдельно: их немного, а батч-ручка ради
+    // десятка запросов не окупается.
+    Promise.all(ids.map(function (id) {
+      return fetch('/api/t/' + id + '/meta')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; });
+    })).then(function (metas) {
+      metas.forEach(function (meta, i) {
+        // Аквариума нет на сервере — тихо убираем из списка, чтобы призраки
+        // не копились после удалений с другого устройства.
+        if (!meta) { Tank.forget(ids[i]); return; }
+        box.appendChild(card(meta));
+      });
+      box.appendChild(newTankTile());
+      empty.hidden = box.children.length > 1;
+    });
+  }
+
+  document.getElementById('code-form').onsubmit = function (e) {
+    e.preventDefault();
+    var v = document.getElementById('code').value.trim().toLowerCase();
+    if (!Tank.isValidId(v)) {
+      Modal.alert({
+        title: 'Код не подходит',
+        text: 'Код аквариума — это ровно 10 символов, буквы и цифры. Проверь, не потерялся ли знак.'
+      });
+      return;
+    }
+    location.href = '/t/' + v;
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>

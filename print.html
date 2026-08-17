@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Раскраски — печать шаблонов</title>
+<style>
+  body { margin: 0; background: #223; font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
+  .top {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 20px; background: #112; color: #eaf6ff;
+  }
+  .top h1 { font-size: 16px; margin: 0; flex: 1; }
+  .top a { color: #58d6ff; text-decoration: none; font-size: 13px; }
+  button {
+    cursor: pointer; font: inherit; font-size: 13px;
+    background: #58d6ff; border: 0; border-radius: 8px; padding: 7px 14px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+  .card { margin-bottom: 28px; }
+  .bar {
+    display: flex; align-items: center; justify-content: space-between;
+    color: #eaf6ff; margin-bottom: 8px;
+  }
+  .sheet {
+    display: block; width: 100%; background: #fff;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5); border-radius: 4px;
+  }
+  .note { color: #8aa; font-size: 13px; margin: 0 0 20px; }
+
+  /* Внутри меню аквариума страница живёт как врезка: подложка и ссылка
+     «мои аквариумы» там лишние, а кнопка печати нужна. */
+  body.embed { background: none; }
+  body.embed .top { position: static; background: none; padding: 4px 2px 0; }
+  body.embed .top h1 { font-size: 15px; }
+  body.embed .top a { display: none; }
+  body.embed .wrap { padding: 14px 2px 6px; }
+  body.embed .sheet { box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+
+  @media print {
+    @page { size: A4 landscape; margin: 0; }
+
+    /* Ноль отступов у всего, что оборачивает лист. Отступы врезки
+       (body.embed) специфичнее обычных правил и в печать пролезали:
+       лишние 14 px не влезали на страницу, лист сползал на следующую,
+       и в стопке появлялись пустые. */
+    html, body, body.embed { margin: 0; padding: 0; background: #fff; }
+    .top, .bar, .note { display: none; }
+    .wrap, body.embed .wrap { max-width: none; margin: 0; padding: 0; }
+
+    /* Разрыв ставим ПЕРЕД каждым листом, кроме первого. Разрыв «после»
+       срабатывал и на последнем — отсюда пустая страница в конце. */
+    .card { margin: 0; break-inside: avoid; page-break-inside: avoid; }
+    .card + .card { break-before: page; page-break-before: always; }
+
+    /* Размер — от самой страницы, а не в миллиметрах: при полях 0 браузер
+       округляет мм по-своему, лист получался на волос выше страницы и
+       выталкивал за собой пустую. */
+    .sheet {
+      width: 100vw; height: 100vh; object-fit: contain;
+      box-shadow: none; border-radius: 0; background: #fff;
+    }
+
+    /* Печать одного листа: остальные не просто скрыты — с них снят и разрыв,
+       иначе перед единственным листом оставалась пустая страница. */
+    body.one .card { display: none; break-before: auto; page-break-before: auto; }
+    body.one .card.target { display: block; }
+  }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Раскраски — шаблоны для печати</h1>
+  <a href="/">← мои аквариумы</a>
+  <button onclick="document.body.classList.remove('one'); print()">Печать всех</button>
+</div>
+<div class="wrap">
+  <p class="note">Печатай на обычной А4 в альбомной ориентации, масштаб 100% (без «вписать в страницу») —
+  размеры меток важны для распознавания. Чёрные квадраты в углах не закрашивать!</p>
+
+  <div id="list"></div>
+</div>
+<script>
+// Врезка в меню аквариума: своя подложка не нужна, а высоту надо сообщать
+// наружу — карточка меню сама её не угадает.
+var EMBED = new URLSearchParams(location.search).has('embed');
+if (EMBED) document.body.classList.add('embed');
+
+if (EMBED && window.parent !== window) {
+  var tellHeight = function () {
+    try {
+      window.parent.postMessage({ aqua: 'height', height: document.body.scrollHeight }, location.origin);
+    } catch (e) { /* не критично */ }
+  };
+  if (window.ResizeObserver) new ResizeObserver(tellHeight).observe(document.body);
+  addEventListener('load', tellHeight);
+  tellHeight();
+}
+
+// Список листов строим из манифеста: он и так единственный источник правды о
+// том, какие виды в игре — дублировать его разметкой значит однажды напечатать
+// лист, который капчур уже не узнаёт.
+function printOne(name) {
+  document.body.classList.add('one');
+  document.querySelectorAll('.card').forEach(function (c) {
+    c.classList.toggle('target', c.dataset.fish === name);
+  });
+  print();
+}
+
+fetch('/assets/coloring/manifest.json')
+  .then(function (r) { return r.json(); })
+  .then(function (m) {
+    var list = document.getElementById('list');
+    m.fish.forEach(function (f) {
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.fish = f.name;
+
+      var bar = document.createElement('div');
+      bar.className = 'bar';
+      var b = document.createElement('b');
+      b.textContent = f.title;
+      var btn = document.createElement('button');
+      btn.textContent = 'Печать этого листа';
+      btn.onclick = function () { printOne(f.name); };
+      bar.appendChild(b);
+      bar.appendChild(btn);
+
+      var img = document.createElement('img');
+      img.className = 'sheet';
+      img.src = '/' + f.svg.replace(/^\//, '');
+      img.alt = f.title;
+      img.loading = 'lazy';
+
+      card.appendChild(bar);
+      card.appendChild(img);
+      list.appendChild(card);
+    });
+  })
+  .catch(function () {
+    document.getElementById('list').textContent =
+      'Не загрузился manifest.json — проверь, что сервер запущен.';
+  });
+</script>
+</body>
+</html>

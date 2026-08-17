@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Силуэты покупных рыб</title>
+<style>
+  body { margin: 0; padding: 24px; background: #0b1a26; color: #eaf6ff;
+         font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 20px; color: #8aa6bd; }
+  #grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .cell { background: #fff; border-radius: 10px; padding: 8px; }
+  .cell canvas { width: 100%; display: block; }
+  .cell b { display: block; color: #0b1a26; font-size: 12px; font-weight: 600;
+            text-align: center; margin-top: 4px; }
+  .cell i { display: block; color: #6b8296; font-size: 11px; font-style: normal;
+            text-align: center; }
+  .cell.bad { background: #ffdfe2; }
+</style>
+</head>
+<body>
+<h1>Силуэты покупных рыб</h1>
+<p class="sub" id="status">Загрузка…</p>
+<p><button id="save" disabled>Скачать contours.json</button>
+<span class="sub">→ положить в tools/ и запустить <code>node tools/make-coloring.js</code></span></p>
+<div id="grid"></div>
+
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<script src="../vendor/DRACOLoader.js"></script>
+<script src="../assets/fish-frame.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // Растр крупный: контур потом упрощается, и лучше терять точность на
+  // упрощении, чем изначально не разглядеть тонкий луч плавника.
+  var SIZE = 1000, PAD = 30;
+
+  // ── проекция модели на боковую плоскость ────────────────────────────────
+  // Базис берём из FishFrame — тот же, по которому рыба ориентируется в сцене.
+  // Любое расхождение здесь означает, что раскрашенный нос окажется на хвосте.
+  function projectTriangles(gltf) {
+    var root = gltf.scene;
+    root.updateWorldMatrix(true, true);
+
+    var skel = FishFrame.fromSkeleton(gltf);
+    var b = FishFrame.bounds(root);
+    var quat = FishFrame.orientQuat(skel.axes, skel.headAtMax, b);
+
+    // ориентируем и центрируем: нос → +Z, спина → +Y, габарит вокруг нуля
+    var M = new THREE.Matrix4()
+      .makeRotationFromQuaternion(quat)
+      .multiply(new THREE.Matrix4().makeTranslation(-b.center.x, -b.center.y, -b.center.z));
+
+    var tris = [], v = new THREE.Vector3();
+    var box = { minZ: Infinity, maxZ: -Infinity, minY: Infinity, maxY: -Infinity,
+                minX: Infinity, maxX: -Infinity };
+
+    root.traverse(function (o) {
+      if (!o.isMesh) return;
+      var g = o.geometry;
+      var p = g.attributes.position;
+      var idx = g.index ? g.index.array : null;
+      var count = idx ? idx.length : p.count;
+      var full = new THREE.Matrix4().multiplyMatrices(M, o.matrixWorld);
+      var pts = [];
+      for (var i = 0; i < count; i++) {
+        v.fromBufferAttribute(p, idx ? idx[i] : i).applyMatrix4(full);
+        // x — вбок от плоскости симметрии: по нему видно, что ближе к зрителю
+        pts.push(v.z, v.y, v.x);
+        if (v.x < box.minX) box.minX = v.x;
+        if (v.x > box.maxX) box.maxX = v.x;
+        if (v.z < box.minZ) box.minZ = v.z;
+        if (v.z > box.maxZ) box.maxZ = v.z;
+        if (v.y < box.minY) box.minY = v.y;
+        if (v.y > box.maxY) box.maxY = v.y;
+      }
+      tris.push(pts);
+    });
+
+    return { tris: tris, box: box, skel: skel };
+  }
+
+  function rasterize(tris, box) {
+    var c = document.createElement('canvas');
+    c.width = c.height = SIZE;
+    var ctx = c.getContext('2d');
+    var spanZ = box.maxZ - box.minZ, spanY = box.maxY - box.minY;
+    var scale = (SIZE - PAD * 2) / Math.max(spanZ, spanY);
+    function px(z) { return PAD + (z - box.minZ) * scale; }
+    function py(y) { return PAD + (box.maxY - y) * scale; }
+
+    ctx.fillStyle = '#000';
+    tris.forEach(function (pts) {
+      // Правило nonzero гасит совпадающие треугольники противоположного
+      // обхода (у плоских плавников перед и зад лежат друг на друге),
+      // поэтому приводим все к одному направлению по знаку площади.
+      for (var start = 0; start < pts.length; start += 9 * 800) {
+        ctx.beginPath();
+        var end = Math.min(start + 9 * 800, pts.length);
+        for (var i = start; i + 8 < end; i += 9) {
+          var ax = px(pts[i]), ay = py(pts[i + 1]);
+          var bx = px(pts[i + 3]), by = py(pts[i + 4]);
+          var cx = px(pts[i + 6]), cy = py(pts[i + 7]);
+          if ((bx - ax) * (cy - ay) - (by - ay) * (cx - ax) < 0) {
+            var tx = bx, ty = by; bx = cx; by = cy; cx = tx; cy = ty;
+          }
+          ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx, cy); ctx.closePath();
+        }
+        ctx.fill();
+      }
+    });
+
+    var img = ctx.getImageData(0, 0, SIZE, SIZE).data;
+    var mask = new Uint8Array(SIZE * SIZE);
+    for (var p = 0; p < SIZE * SIZE; p++) mask[p] = img[p * 4 + 3] > 40 ? 1 : 0;
+    return { mask: mask, scale: scale };
+  }
+
+  // Дилатация с последующей эрозией (замыкание): сшивает плавник, отстоящий
+  // от тела на пиксель, но не раздувает силуэт.
+  function morph(mask, grow, shrink) {
+    function pass(m, want) {
+      var out = new Uint8Array(m);
+      for (var y = 1; y < SIZE - 1; y++) {
+        for (var x = 1; x < SIZE - 1; x++) {
+          var i = y * SIZE + x;
+          if (m[i] === want) continue;
+          if (m[i - SIZE] === want || m[i + SIZE] === want ||
+              m[i - 1] === want || m[i + 1] === want ||
+              m[i - SIZE - 1] === want || m[i - SIZE + 1] === want ||
+              m[i + SIZE - 1] === want || m[i + SIZE + 1] === want) out[i] = want;
+        }
+      }
+      return out;
+    }
+    var n;
+    for (n = 0; n < grow; n++) mask = pass(mask, 1);
+    for (n = 0; n < shrink; n++) mask = pass(mask, 0);
+    return mask;
+  }
+
+  function largestComponent(mask) {
+    var labels = new Int32Array(SIZE * SIZE), next = 1, best = 0, bestCount = 0;
+    var stack = [];
+    for (var i = 0; i < SIZE * SIZE; i++) {
+      if (!mask[i] || labels[i]) continue;
+      var count = 0;
+      stack.length = 0; stack.push(i); labels[i] = next;
+      while (stack.length) {
+        var p = stack.pop(); count++;
+        var x = p % SIZE, y = (p / SIZE) | 0;
+        for (var dy = -1; dy <= 1; dy++) {
+          for (var dx = -1; dx <= 1; dx++) {
+            var nx = x + dx, ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= SIZE || ny >= SIZE) continue;
+            var q = ny * SIZE + nx;
+            if (mask[q] && !labels[q]) { labels[q] = next; stack.push(q); }
+          }
+        }
+      }
+      if (count > bestCount) { bestCount = count; best = next; }
+      next++;
+    }
+    var out = new Uint8Array(SIZE * SIZE);
+    for (var j = 0; j < SIZE * SIZE; j++) out[j] = labels[j] === best ? 1 : 0;
+    return { mask: out, area: bestCount };
+  }
+
+  function traceBoundary(mask) {
+    var dirs = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+    var sx = -1, sy = -1;
+    outer:
+    for (var y = 0; y < SIZE; y++)
+      for (var x = 0; x < SIZE; x++)
+        if (mask[y * SIZE + x]) { sx = x; sy = y; break outer; }
+    if (sx < 0) return [];
+    var pts = [], cx = sx, cy = sy, dir = 7, limit = SIZE * SIZE;
+    do {
+      pts.push([cx, cy]);
+      var found = false;
+      for (var i = 0; i < 8; i++) {
+        var d = (dir + 6 + i) % 8;
+        var nx = cx + dirs[d][0], ny = cy + dirs[d][1];
+        if (nx >= 0 && ny >= 0 && nx < SIZE && ny < SIZE && mask[ny * SIZE + nx]) {
+          cx = nx; cy = ny; dir = d; found = true; break;
+        }
+      }
+      if (!found) break;
+    } while ((cx !== sx || cy !== sy) && pts.length < limit);
+    return pts;
+  }
+
+  function rdp(pts, eps) {
+    if (pts.length < 3) return pts.slice();
+    var keep = new Uint8Array(pts.length);
+    keep[0] = keep[pts.length - 1] = 1;
+    var stack = [[0, pts.length - 1]];
+    while (stack.length) {
+      var seg = stack.pop(), a = seg[0], b = seg[1];
+      var ax = pts[a][0], ay = pts[a][1];
+      var dx = pts[b][0] - ax, dy = pts[b][1] - ay;
+      var len = Math.sqrt(dx * dx + dy * dy) || 1;
+      var maxD = 0, maxI = -1;
+      for (var i = a + 1; i < b; i++) {
+        var d = Math.abs((pts[i][0] - ax) * dy - (pts[i][1] - ay) * dx) / len;
+        if (d > maxD) { maxD = d; maxI = i; }
+      }
+      if (maxD > eps) { keep[maxI] = 1; stack.push([a, maxI], [maxI, b]); }
+    }
+    var out = [];
+    for (var j = 0; j < pts.length; j++) if (keep[j]) out.push(pts[j]);
+    return out;
+  }
+
+  function chaikin(pts, passes) {
+    for (var n = 0; n < passes; n++) {
+      var out = [];
+      for (var i = 0; i < pts.length; i++) {
+        var a = pts[i], b = pts[(i + 1) % pts.length];
+        out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25]);
+        out.push([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
+      }
+      pts = out;
+    }
+    return pts;
+  }
+
+
+  // ── плавники, лежащие на боку рыбы ──────────────────────────────────────
+  // Грудной плавник в силуэт не попадает: он внутри него, поверх тела. Зато
+  // он ближе к зрителю, и по его краю карта глубины даёт ступеньку. Её и
+  // ищем: растеризуем модель сz-буфером по боковой координате, берём места
+  // резкого перепада, выкидываем всё у самого силуэта (там перепад даёт сам
+  // край рыбы) и вытягиваем оставшиеся пятна в дуги.
+  var INNER = {
+    stepPart: 0.10,   // перепад глубины: доля полной ширины рыбы
+    edgeGap: 6,       // px; ближе к силуэту не смотрим
+    minPixels: 60,    // мельче — шум чешуи, а не плавник
+    minLenPart: 0.06  // короче этой доли длины тела не рисуем
+  };
+
+  function depthMap(tris, box, scale) {
+    var depth = new Float32Array(SIZE * SIZE);
+    depth.fill(-Infinity);
+    function px(z) { return PAD + (z - box.minZ) * scale; }
+    function py(y) { return PAD + (box.maxY - y) * scale; }
+
+    tris.forEach(function (pts) {
+      for (var i = 0; i + 8 < pts.length; i += 9) {
+        var ax = px(pts[i]), ay = py(pts[i + 1]), av = pts[i + 2];
+        var bx = px(pts[i + 3]), by = py(pts[i + 4]), bv = pts[i + 5];
+        var cx = px(pts[i + 6]), cy = py(pts[i + 7]), cv = pts[i + 8];
+        var minX = Math.max(0, Math.floor(Math.min(ax, bx, cx)));
+        var maxX = Math.min(SIZE - 1, Math.ceil(Math.max(ax, bx, cx)));
+        var minY = Math.max(0, Math.floor(Math.min(ay, by, cy)));
+        var maxY = Math.min(SIZE - 1, Math.ceil(Math.max(ay, by, cy)));
+        var den = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
+        if (!den) continue;
+        for (var y = minY; y <= maxY; y++) {
+          for (var x = minX; x <= maxX; x++) {
+            var l1 = ((by - cy) * (x + 0.5 - cx) + (cx - bx) * (y + 0.5 - cy)) / den;
+            var l2 = ((cy - ay) * (x + 0.5 - cx) + (ax - cx) * (y + 0.5 - cy)) / den;
+            var l3 = 1 - l1 - l2;
+            if (l1 < 0 || l2 < 0 || l3 < 0) continue;
+            var v = l1 * av + l2 * bv + l3 * cv;
+            var k = y * SIZE + x;
+            if (v > depth[k]) depth[k] = v;
+          }
+        }
+      }
+    });
+    return depth;
+  }
+
+  // Пиксели, где глубина прыгает, — край плавника, лежащего поверх тела.
+  function stepMask(depth, mask, step) {
+    var inner = new Uint8Array(mask);          // отступаем от силуэта внутрь
+    for (var n = 0; n < INNER.edgeGap; n++) {
+      var prev = inner;
+      inner = new Uint8Array(SIZE * SIZE);
+      for (var y = 1; y < SIZE - 1; y++) {
+        for (var x = 1; x < SIZE - 1; x++) {
+          var i = y * SIZE + x;
+          if (!prev[i]) continue;
+          if (prev[i - 1] && prev[i + 1] && prev[i - SIZE] && prev[i + SIZE]) inner[i] = 1;
+        }
+      }
+    }
+
+    var out = new Uint8Array(SIZE * SIZE);
+    for (var y2 = 1; y2 < SIZE - 1; y2++) {
+      for (var x2 = 1; x2 < SIZE - 1; x2++) {
+        var k = y2 * SIZE + x2;
+        if (!inner[k]) continue;
+        var gx = Math.abs(depth[k + 1] - depth[k - 1]);
+        var gy = Math.abs(depth[k + SIZE] - depth[k - SIZE]);
+        if (Math.max(gx, gy) > step) out[k] = 1;
+      }
+    }
+    return out;
+  }
+
+  // Пятно пикселей → дуга: берём две самые далёкие точки (двойной обход в
+  // ширину) и путь между ними. Для края плавника это и есть его линия.
+  function arcs(edge) {
+    var labels = new Int32Array(SIZE * SIZE), out = [], stack = [];
+    var nbr = [-1, 1, -SIZE, SIZE, -SIZE - 1, -SIZE + 1, SIZE - 1, SIZE + 1];
+    var label = 0;
+
+    function bfs(start, cells) {
+      var dist = new Map(), prev = new Map(), queue = [start], far = start;
+      dist.set(start, 0);
+      for (var qi = 0; qi < queue.length; qi++) {
+        var p = queue[qi];
+        if (dist.get(p) > dist.get(far)) far = p;
+        for (var n = 0; n < 8; n++) {
+          var q = p + nbr[n];
+          if (!cells.has(q) || dist.has(q)) continue;
+          dist.set(q, dist.get(p) + 1);
+          prev.set(q, p);
+          queue.push(q);
+        }
+      }
+      return { far: far, prev: prev };
+    }
+
+    for (var i = 0; i < SIZE * SIZE; i++) {
+      if (!edge[i] || labels[i]) continue;
+      label++;
+      var cells = new Set();
+      stack.length = 0; stack.push(i); labels[i] = label;
+      while (stack.length) {
+        var p2 = stack.pop();
+        cells.add(p2);
+        for (var n2 = 0; n2 < 8; n2++) {
+          var q2 = p2 + nbr[n2];
+          if (q2 < 0 || q2 >= SIZE * SIZE || !edge[q2] || labels[q2]) continue;
+          labels[q2] = label;
+          stack.push(q2);
+        }
+      }
+      if (cells.size < INNER.minPixels) continue;
+
+      var a = bfs(cells.values().next().value, cells);
+      var b = bfs(a.far, cells);
+      var path = [], cur = b.far;
+      while (cur !== undefined) { path.push([cur % SIZE, (cur / SIZE) | 0]); cur = b.prev.get(cur); }
+      if (path.length > 3) out.push(path);
+    }
+    return out;
+  }
+
+  function extract(gltf) {
+    var pr = projectTriangles(gltf);
+    var r = rasterize(pr.tris, pr.box);
+    var comp = largestComponent(morph(r.mask, 3, 2));
+    var raw = traceBoundary(comp.mask);
+    if (!raw.length) return null;
+    var contourPx = rdp(chaikin(rdp(raw, 2.0), 2), 1.2);
+
+    // Нормируем: длина тела = 1, габарит центрирован в нуле. Так контур не
+    // зависит от того, в каких единицах автор пака смоделировал рыбу.
+    var box = pr.box;
+    var spanZ = box.maxZ - box.minZ, spanY = box.maxY - box.minY;
+    var cz = (box.minZ + box.maxZ) / 2, cy2 = (box.minY + box.maxY) / 2;
+    var k = 1 / spanZ;
+
+    var contour = contourPx.map(function (p) {
+      return [
+        +(((box.minZ + (p[0] - PAD) / r.scale) - cz) * k).toFixed(4),
+        +(((box.maxY - (p[1] - PAD) / r.scale) - cy2) * k).toFixed(4)
+      ];
+    });
+
+    // Плавники поверх тела — в тех же нормированных координатах, что и контур.
+    var toModel = function (p) {
+      return [
+        +(((box.minZ + (p[0] - PAD) / r.scale) - cz) * k).toFixed(4),
+        +(((box.maxY - (p[1] - PAD) / r.scale) - cy2) * k).toFixed(4)
+      ];
+    };
+    var spanX = pr.box.maxX - pr.box.minX;
+    var depth = depthMap(pr.tris, pr.box, r.scale);
+    var inner = arcs(stepMask(depth, comp.mask, spanX * INNER.stepPart))
+      .map(function (path) { return rdp(path, 2.5).map(toModel); })
+      .filter(function (line) {
+        var len = 0;
+        for (var i = 1; i < line.length; i++) {
+          len += Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]);
+        }
+        return len >= INNER.minLenPart;
+      });
+
+    return {
+      contour: contour,
+      inner: inner,
+      bbox: { z: [-0.5, 0.5], y: [+(-spanY * k / 2).toFixed(4), +(spanY * k / 2).toFixed(4)] },
+      aspect: +(spanY / spanZ).toFixed(3),
+      points: contour.length,
+      // доля закрашенного в габарите: у «колючих» рыб она низкая
+      fill: +(comp.area / ((spanZ * r.scale) * (spanY * r.scale))).toFixed(3),
+      axes: pr.skel.axes, headAtMax: pr.skel.headAtMax
+    };
+  }
+
+  // ── превью ──────────────────────────────────────────────────────────────
+  function draw(cell, res) {
+    var W = 260, H = 170, m = 10;
+    var c = document.createElement('canvas');
+    c.width = W * 2; c.height = H * 2;
+    var ctx = c.getContext('2d');
+    ctx.scale(2, 2);
+    var s = Math.min((W - m * 2) / 1, (H - m * 2) / Math.max(res.aspect, 0.15));
+    function X(z) { return W / 2 + z * s; }
+    function Y(y) { return H / 2 - y * s; }
+    ctx.beginPath();
+    res.contour.forEach(function (p, i) {
+      if (i === 0) ctx.moveTo(X(p[0]), Y(p[1])); else ctx.lineTo(X(p[0]), Y(p[1]));
+    });
+    ctx.closePath();
+    ctx.fillStyle = '#eef4f8'; ctx.fill();
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 1.6; ctx.stroke();
+    // плавники поверх тела — пунктиром, как они лягут на лист
+    ctx.strokeStyle = '#3aa0e0'; ctx.lineWidth = 1.2;
+    ctx.setLineDash([3, 2]);
+    (res.inner || []).forEach(function (line) {
+      ctx.beginPath();
+      line.forEach(function (p, i) {
+        if (i === 0) ctx.moveTo(X(p[0]), Y(p[1])); else ctx.lineTo(X(p[0]), Y(p[1]));
+      });
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // нос — отметка, чтобы сразу видеть, куда рыба смотрит
+    ctx.fillStyle = '#e0483a';
+    ctx.beginPath(); ctx.arc(X(0.5), Y(0), 4, 0, 6.3); ctx.fill();
+    cell.appendChild(c);
+  }
+
+  // ── прогон ──────────────────────────────────────────────────────────────
+  var grid = document.getElementById('grid'), status = document.getElementById('status');
+  var loader = new THREE.GLTFLoader();
+  if (THREE.DRACOLoader) {
+    var d = new THREE.DRACOLoader();
+    d.setDecoderPath('/vendor/draco/');
+    loader.setDRACOLoader(d);
+  }
+
+  var results = {};
+  window.SIL = results;
+
+  fetch('/api/pack').then(function (r) { return r.json(); }).then(function (list) {
+    var i = 0;
+    (function next() {
+      if (i >= list.length) {
+        status.textContent = 'Готово: ' + Object.keys(results).length + ' из ' + list.length +
+          '. Контуры — в window.SIL.';
+        window.SIL_DONE = true;
+        // Отдельно — только плавники поверх тела: контуры трогать незачем,
+        // а этот кусок мал и ложится рядом с contours.json отдельным файлом.
+        window.SIL_INNER = {};
+        Object.keys(results).forEach(function (name) {
+          if ((results[name].inner || []).length) window.SIL_INNER[name] = results[name].inner;
+        });
+        var btn = document.getElementById('save');
+        btn.disabled = false;
+        btn.onclick = function () {
+          var blob = new Blob([JSON.stringify(results)], { type: 'application/json' });
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'contours.json';
+          a.click();
+          setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+        };
+        return;
+      }
+      var m = list[i++];
+      status.textContent = 'Обработка ' + i + '/' + list.length + ': ' + m.title;
+      loader.load(m.url, function (gltf) {
+        var cell = document.createElement('div');
+        cell.className = 'cell';
+        var res = null;
+        try { res = extract(gltf); } catch (e) { console.error(m.name, e); }
+        if (res) {
+          results[m.name] = res;
+          draw(cell, res);
+          var b = document.createElement('b'); b.textContent = m.title;
+          var s = document.createElement('i');
+          s.textContent = 'точек ' + res.points + ' · плавников ' + (res.inner || []).length +
+                          ' · заполнение ' + res.fill + ' · h/l ' + res.aspect;
+          cell.appendChild(b); cell.appendChild(s);
+        } else {
+          cell.className = 'cell bad';
+          var e2 = document.createElement('b'); e2.textContent = m.title + ' — не вышло';
+          cell.appendChild(e2);
+        }
+        grid.appendChild(cell);
+        setTimeout(next, 0);
+      }, undefined, function (err) {
+        console.error('не загрузилась ' + m.name, err);
+        setTimeout(next, 0);
+      });
+    })();
+  });
+})();
+</script>
+</body>
+</html>

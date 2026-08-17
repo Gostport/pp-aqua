@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Проверка распознавания листов</title>
+<style>
+  body { margin: 0; padding: 24px; background: #0b1a26; color: #eaf6ff;
+         font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 20px; color: #8aa6bd; }
+  #grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .cell { background: #0f2a3d; border-radius: 10px; padding: 8px;
+          border: 1px solid rgba(140,200,255,.16); }
+  .cell img { width: 100%; display: block; border-radius: 6px; background: #06131e; }
+  .cell b { display: block; font-size: 12px; margin-top: 6px; }
+  .ok  { color: #7ee08a; }
+  .bad { color: #ff8f9b; }
+  .cell.fail { border-color: rgba(255,107,122,.55); }
+</style>
+</head>
+<body>
+<h1>Проверка распознавания листов</h1>
+<p class="sub" id="status">Загрузка…</p>
+<div id="grid"></div>
+
+<script src="../assets/capture.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // Каждый лист прогоняем несколько раз с разными искажениями: одно удачное
+  // распознавание в лоб ничего не доказывает — важно, что метки читаются
+  // с перекосом, поворотом и провалом освещения, как на реальном фото.
+  var CASES = [
+    { name: 'ровно',            warp: 0.00, rot: 0,     dim: 1.00, noise: 3  },
+    { name: 'перекос',          warp: 0.06, rot: 0.05,  dim: 0.92, noise: 6  },
+    { name: 'сильный перекос',  warp: 0.13, rot: -0.11, dim: 0.78, noise: 9  },
+    { name: 'вверх ногами',     warp: 0.05, rot: 3.10,  dim: 0.88, noise: 6  }
+  ];
+
+  var SHEET_W = 1400, SHEET_H = 990;    // «отпечатанный» лист
+  var PHOTO_W = 1500, PHOTO_H = 1150;   // кадр телефона
+
+  // ── линал для искажения ──────────────────────────────────────────────────
+  function solve8(M, b) {
+    var n = 8, A = M.map(function (row, i) { return row.concat([b[i]]); });
+    for (var c = 0; c < n; c++) {
+      var piv = c;
+      for (var r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+      var t = A[c]; A[c] = A[piv]; A[piv] = t;
+      for (var r2 = 0; r2 < n; r2++) {
+        if (r2 === c || Math.abs(A[c][c]) < 1e-12) continue;
+        var f = A[r2][c] / A[c][c];
+        for (var k = c; k <= n; k++) A[r2][k] -= f * A[c][k];
+      }
+    }
+    return A.map(function (row, i) { return row[n] / row[i]; });
+  }
+  function homography(src, dst) {
+    var M = [], b = [];
+    for (var i = 0; i < 4; i++) {
+      var x = src[i][0], y = src[i][1], X = dst[i][0], Y = dst[i][1];
+      M.push([x, y, 1, 0, 0, 0, -X * x, -X * y]); b.push(X);
+      M.push([0, 0, 0, x, y, 1, -Y * x, -Y * y]); b.push(Y);
+    }
+    return solve8(M, b).concat([1]);
+  }
+  function applyH(h, x, y) {
+    var d = h[6] * x + h[7] * y + h[8];
+    return [(h[0] * x + h[1] * y + h[2]) / d, (h[3] * x + h[4] * y + h[5]) / d];
+  }
+
+  // Псевдослучайное с фиксированным зерном: провалившийся случай должен
+  // воспроизводиться, а не исчезать при следующем запуске.
+  var seed = 12345;
+  function rnd() {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  }
+
+  function loadSvg(url) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () { resolve(img); };
+      img.onerror = function () { reject(new Error('не загрузился ' + url)); };
+      img.src = url;
+    });
+  }
+
+  // ── имитация детской раскраски ───────────────────────────────────────────
+  function colorInside(ctx, fish, sheet) {
+    var st = fish.sheetTransform;
+    var kx = SHEET_W / sheet.w, ky = SHEET_H / sheet.h;
+    ctx.save();
+    ctx.beginPath();
+    fish.contourModel.forEach(function (p, i) {
+      var x = (st.ox + st.scale * p[0]) * kx;
+      var y = (st.oy - st.scale * p[1]) * ky;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.clip();
+
+    for (var i = 0; i < 26; i++) {
+      ctx.fillStyle = 'hsl(' + (rnd() * 360 | 0) + ',85%,' + (40 + rnd() * 30 | 0) + '%)';
+      ctx.beginPath();
+      ctx.ellipse(
+        SHEET_W * (0.25 + rnd() * 0.55), SHEET_H * (0.3 + rnd() * 0.4),
+        30 + rnd() * 70, 20 + rnd() * 55, rnd() * 3.14, 0, 6.3
+      );
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ── лист → «фотография» ──────────────────────────────────────────────────
+  function makePhoto(sheetCanvas, cs) {
+    var sctx = sheetCanvas.getContext('2d', { willReadFrequently: true });
+    var src = sctx.getImageData(0, 0, SHEET_W, SHEET_H).data;
+
+    var out = document.createElement('canvas');
+    out.width = PHOTO_W; out.height = PHOTO_H;
+    var octx = out.getContext('2d', { willReadFrequently: true });
+    var img = octx.createImageData(PHOTO_W, PHOTO_H);
+    var d = img.data;
+
+    // лист внутри кадра: сдвиг, поворот и «завал» одного края
+    var cx = PHOTO_W / 2, cy = PHOTO_H / 2;
+    var hw = SHEET_W * 0.44, hh = SHEET_H * 0.44;
+    var corners = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(function (p, i) {
+      var wx = p[0] * (1 + (i === 1 || i === 2 ? cs.warp : -cs.warp));
+      var wy = p[1] * (1 + (i >= 2 ? cs.warp * 0.7 : -cs.warp * 0.7));
+      var c = Math.cos(cs.rot), s = Math.sin(cs.rot);
+      return [cx + wx * c - wy * s, cy + wx * s + wy * c];
+    });
+    // фото → лист
+    var H = homography(corners, [[0, 0], [SHEET_W, 0], [SHEET_W, SHEET_H], [0, SHEET_H]]);
+
+    for (var y = 0; y < PHOTO_H; y++) {
+      for (var x = 0; x < PHOTO_W; x++) {
+        var o = (y * PHOTO_W + x) * 4;
+        var p = applyH(H, x, y);
+        var xi = Math.round(p[0]), yi = Math.round(p[1]);
+        var r, g, b;
+        if (xi >= 0 && yi >= 0 && xi < SHEET_W && yi < SHEET_H) {
+          var si = (yi * SHEET_W + xi) * 4;
+          r = src[si]; g = src[si + 1]; b = src[si + 2];
+        } else {
+          r = 96; g = 104; b = 112;                 // стол вокруг листа
+        }
+        // неравномерная засветка: один угол темнее, плюс тёплый оттенок лампы
+        var fall = cs.dim * (1 - 0.28 * (x / PHOTO_W) * (y / PHOTO_H));
+        var n = (rnd() - 0.5) * cs.noise * 2;
+        d[o]     = Math.max(0, Math.min(255, r * fall * 1.02 + n));
+        d[o + 1] = Math.max(0, Math.min(255, g * fall * 1.00 + n));
+        d[o + 2] = Math.max(0, Math.min(255, b * fall * 0.94 + n));
+        d[o + 3] = 255;
+      }
+    }
+    octx.putImageData(img, 0, 0);
+    return out;
+  }
+
+  // ── прогон ───────────────────────────────────────────────────────────────
+  var grid = document.getElementById('grid'), status = document.getElementById('status');
+  var passed = 0, total = 0, failures = [];
+
+  fetch('/assets/coloring/manifest.json').then(function (r) { return r.json(); }).then(function (m) {
+    var i = 0;
+    (function next() {
+      if (i >= m.fish.length) {
+        status.textContent = 'Распознано ' + passed + ' из ' + total +
+          (failures.length ? '. Провалы: ' + failures.join(', ') : '. Провалов нет.');
+        status.className = failures.length ? 'sub bad' : 'sub ok';
+        window.TEST_DONE = true;
+        window.TEST_RESULT = { passed: passed, total: total, failures: failures };
+        return;
+      }
+      var f = m.fish[i++];
+      status.textContent = 'Проверка ' + i + '/' + m.fish.length + ': ' + f.title;
+
+      loadSvg('/' + f.svg.replace(/^\//, '')).then(function (svg) {
+        var sheet = document.createElement('canvas');
+        sheet.width = SHEET_W; sheet.height = SHEET_H;
+        var sctx = sheet.getContext('2d', { willReadFrequently: true });
+        sctx.fillStyle = '#fff';
+        sctx.fillRect(0, 0, SHEET_W, SHEET_H);
+        sctx.drawImage(svg, 0, 0, SHEET_W, SHEET_H);
+        colorInside(sctx, f, m.sheet);
+
+        var chain = Promise.resolve();
+        CASES.forEach(function (cs) {
+          chain = chain.then(function () {
+            total++;
+            var photo = makePhoto(sheet, cs);
+            return FishCapture.processPhoto(photo, m).then(function (res) {
+              var good = res.kind === f.name;
+              if (good) passed++; else failures.push(f.name + '/' + cs.name + '→' + res.kind);
+              show(f, cs, good, res.preview, good ? 'узнан' : 'принят за ' + res.title);
+            }, function (err) {
+              failures.push(f.name + '/' + cs.name + ': не найден');
+              show(f, cs, false, null, String(err.message).slice(0, 60));
+            });
+          });
+        });
+        chain.then(function () { setTimeout(next, 0); });
+      }, function () { setTimeout(next, 0); });
+    })();
+  });
+
+  function show(f, cs, good, preview, note) {
+    var cell = document.createElement('div');
+    cell.className = 'cell' + (good ? '' : ' fail');
+    if (preview) {
+      var img = document.createElement('img');
+      img.src = preview;
+      cell.appendChild(img);
+    }
+    var b = document.createElement('b');
+    b.textContent = f.title + ' · ' + cs.name;
+    var s = document.createElement('span');
+    s.className = good ? 'ok' : 'bad';
+    s.textContent = note;
+    cell.appendChild(b);
+    cell.appendChild(s);
+    grid.appendChild(cell);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Аквариум — управление рыбками</title>
+<style>
+  :root {
+    --ink: #eaf6ff;
+    --muted: #8aa6bd;
+    --card: rgba(9, 24, 40, 0.72);
+    --line: rgba(140, 200, 255, 0.16);
+    --accent: #58d6ff;
+    --danger: #ff6b7a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: linear-gradient(180deg, #06263f 0%, #04101c 100%);
+    color: var(--ink);
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  .top {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 14px 22px;
+    background: rgba(4, 16, 28, 0.9);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(10px);
+  }
+  .top h1 { font-size: 17px; margin: 0; }
+  .top .count { color: var(--muted); font-size: 13px; }
+  .top .sp { flex: 1; }
+  .top a { color: var(--accent); text-decoration: none; font-size: 13px; }
+
+  button, select {
+    cursor: pointer; font: inherit; font-size: 13px;
+    color: var(--ink); background: rgba(88, 214, 255, 0.12);
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 14px;
+  }
+  button:hover, select:hover { background: rgba(88, 214, 255, 0.25); }
+  select:disabled { opacity: 0.5; cursor: default; }
+  select option { background: #06263f; color: var(--ink); }
+  button.danger { color: var(--danger); border-color: rgba(255, 107, 122, 0.35); background: rgba(255, 107, 122, 0.08); }
+  button.danger:hover { background: rgba(255, 107, 122, 0.2); }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 26px 20px 60px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 18px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .card img, .card .ph {
+    width: 100%; aspect-ratio: 2 / 1; object-fit: contain;
+    background: #0a2233; display: block;
+  }
+  .card .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .card .name { font-weight: 600; }
+  .card .date { color: var(--muted); font-size: 12.5px; }
+  .card button { align-self: stretch; }
+
+  .empty {
+    text-align: center; color: var(--muted);
+    padding: 80px 20px;
+  }
+  .empty .big { font-size: 52px; margin-bottom: 12px; }
+
+  .clearrow { display: flex; justify-content: center; margin-top: 28px; }
+  .clearrow[hidden] { display: none; }
+
+  .settings {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .settings[hidden] { display: none; }   /* display:flex иначе перебивает hidden */
+  /* Блок с сеткой: подпись отдельной строкой сверху, как над набором рыбок. */
+  .settings.block { display: block; }
+  .settings.block .label { display: block; margin: 0 0 12px; }
+  .settings .label { color: var(--muted); font-size: 13px; margin-right: 4px; }
+  .settings button[aria-pressed="true"] {
+    background: var(--accent); border-color: var(--accent);
+    color: #04101c; font-weight: 600;
+  }
+
+  /* Фоны выложены теми же карточками, что и рыбки из набора: картинка,
+     подпись, рамка. Сетка считает колонки от ширины полосы, поэтому строка
+     заполняется целиком и в узком окне, и в широком. */
+  .bgs {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  }
+  .bgitem, .bgadd {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 6px 6px 8px; max-width: 200px;
+    font: inherit; text-align: center; cursor: pointer; color: var(--ink);
+    background: rgba(10, 34, 51, .6); border: 1px solid var(--line); border-radius: 12px;
+    transition: border-color .15s, background .15s, transform .12s;
+  }
+  .bgitem:hover, .bgadd:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .bgitem img {
+    width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block;
+    border-radius: 8px; background: #0a2233;
+  }
+  .bgitem .t { font-size: 11.5px; line-height: 1.25; color: var(--muted); }
+  /* Выбранный фон: в аквариуме он один, и видно это должно быть с одного взгляда. */
+  .bgitem[data-on="1"] { border-color: var(--accent); background: rgba(88, 214, 255, .16); }
+  .bgitem[data-on="1"] .t { color: var(--accent); }
+
+  .bgdel {
+    position: absolute; top: -6px; right: -6px;
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid var(--line); background: #16202b; color: var(--muted);
+    font-size: 13px; line-height: 1; cursor: pointer; padding: 0;
+    display: none; place-content: center;
+  }
+  .bgitem:hover .bgdel { display: grid; }
+  .bgdel:hover { background: #4a1d24; color: #ff9aa6; border-color: #7a2b36; }
+
+  .bgadd { border-style: dashed; color: var(--muted); justify-content: center; }
+  .bgadd .plus { font-size: 22px; line-height: 1; }
+  .bgadd[data-busy="1"] { border-style: solid; color: var(--accent); }
+
+  /* Внутри меню аквариума страница живёт как врезка: своя подложка, свои
+     ссылки на аквариум и съёмку там лишние — их даёт само меню. */
+  body.embed { background: none; min-height: 0; }
+  /* Шапку во врезке прячем целиком: имя аквариума и счётчик рыбок стоят
+     в самой карточке меню, а ссылки дублируют её пункты. */
+  body.embed .top { display: none; }
+  /* Половинки для меню: фон и рыбки — разные пункты, и путать их незачем. */
+  body.only-bg .grid, body.only-bg .empty, body.only-bg .clearrow,
+  body.only-fish .settings { display: none; }
+  body.embed .wrap { padding: 4px 4px 8px; }
+  body.embed .gate { position: absolute; }
+  body.embed .gaterow a { display: none; }
+
+  /* Замок на всю страницу. Не модалка: из окна выходят по «Отмена», а
+     отсюда выходят к аквариуму — управление без пароля не откроется. */
+  .gate {
+    position: fixed; inset: 0; z-index: 50;
+    display: grid; place-items: center; padding: 20px;
+    background: rgba(3, 12, 22, .88);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .gate[hidden] { display: none; }
+  .gatebox {
+    width: min(420px, 100%); text-align: center;
+    background: #0b2033; border: 1px solid var(--line);
+    border-radius: 20px; padding: 26px; box-shadow: 0 30px 80px rgba(0,10,20,.6);
+  }
+  .gatebox h2 { margin: 0 0 8px; font-size: 19px; }
+  .gatebox p { margin: 0; font-size: 13.5px; color: var(--muted); }
+  .gatebox input {
+    width: 100%; margin: 18px 0 0; font: inherit; font-size: 17px; text-align: center;
+    letter-spacing: 3px; font-family: ui-monospace, Consolas, monospace;
+    color: var(--ink); background: rgba(4,16,28,.6);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+  }
+  .gatebox input:focus { outline: none; border-color: var(--accent); }
+  .gaterow { display: flex; gap: 10px; margin-top: 14px; }
+  .gaterow button, .gaterow a {
+    flex: 1; cursor: pointer; font: inherit; font-size: 14px; text-decoration: none;
+    padding: 11px 14px; border-radius: 12px; border: 1px solid var(--line);
+    color: var(--ink); background: rgba(88,214,255,.1);
+  }
+  .gaterow .go { background: var(--accent); border-color: var(--accent); color: #04101c; font-weight: 600; }
+  .gate .bad { margin-top: 12px; color: #ff9aa6; font-size: 13px; }
+
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1 id="tank-name">🐠 Аквариум</h1>
+  <span class="count" id="count"></span>
+  <span class="sp"></span>
+  <a id="link-tank">Аквариум</a>
+  <a id="link-capture">Съёмка</a>
+  <a href="/print.html">Раскраски</a>
+  <a href="/">Мои аквариумы</a>
+</div>
+
+<div class="gate" id="gate" hidden>
+  <div class="gatebox">
+    <h2>🔒 Управление под паролем</h2>
+    <p>Смотреть аквариум можно и без него — пароль нужен, чтобы менять фон,
+       переименовывать и удалять рыбок.</p>
+    <input id="gate-pass" type="password" inputmode="numeric" autocomplete="off"
+           spellcheck="false" placeholder="пароль">
+    <div class="gaterow">
+      <a id="gate-back">← в аквариум</a>
+      <button class="go" id="gate-go">Войти</button>
+    </div>
+    <p class="bad" id="gate-bad" hidden></p>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="settings block">
+    <span class="label">Фон аквариума</span>
+    <div class="bgs" id="bgs"></div>
+    <input type="file" id="bg-file" accept="image/png,image/jpeg,image/webp" hidden>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="empty" id="empty" hidden>
+    <div class="big">🫧</div>
+    В аквариуме пока нет нарисованных рыбок.<br>
+    Раскрась лист и сфотографируй его с телефона — ссылка «Съёмка» наверху.
+  </div>
+
+  <!-- Внизу, под самими рыбками: сверху эта кнопка стояла рядом с навигацией
+       и норовила нажаться заодно с ней. -->
+  <div class="clearrow" id="clearrow" hidden>
+    <button class="danger" id="b-clear">Удалить всех рыбок</button>
+  </div>
+</div>
+
+<script src="/vendor/three.min.js"></script>
+<script src="/vendor/GLTFLoader.js"></script>
+<script src="/assets/fish-frame.js"></script>
+<script src="/assets/fish-thumbs.js"></script>
+<script src="/assets/modal.js"></script>
+<script src="/assets/tank.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  if (!Tank.id) { location.replace('/'); return; }
+
+  // Страница открыта во врезке меню аквариума. Меню зовёт её дважды и
+  // каждый раз просит только свою половину: ?only=bg — фоны, ?only=fish —
+  // рыбки. Целиком страница показывается по своему адресу /t/<id>/admin.
+  var params = new URLSearchParams(location.search);
+  var EMBED = params.has('embed');
+  var ONLY = params.get('only');
+  var inFrame = EMBED && window.parent !== window;
+  if (EMBED) document.body.classList.add('embed');
+  if (ONLY) document.body.classList.add('only-' + ONLY);
+
+  // Высота у страницы гуляет — от одной строки замка до сетки с рыбками.
+  // Врезка не тянется сама, поэтому свой рост она сообщает наружу.
+  if (inFrame) {
+    var tellHeight = function () {
+      try {
+        window.parent.postMessage({ aqua: 'height', height: document.body.scrollHeight }, location.origin);
+      } catch (e) { /* не критично */ }
+    };
+    if (window.ResizeObserver) new ResizeObserver(tellHeight).observe(document.body);
+    addEventListener('load', tellHeight);
+    tellHeight();
+  }
+
+  document.getElementById('link-tank').href = Tank.url;
+  document.getElementById('link-capture').href = Tank.url + '/capture';
+
+  // ── имя аквариума ──
+  var meta = { id: Tank.id, name: 'Аквариум' };
+
+  function renderMeta() {
+    document.getElementById('tank-name').textContent = '🐠 ' + meta.name;
+    document.title = meta.name + ' — управление';
+  }
+
+  fetch(Tank.api + '/meta')
+    .then(function (r) {
+      // Аквариума нет — управлять нечем, уводим к списку, а из списка
+      // этот код заодно выкидываем, чтобы не висел призраком.
+      if (!r.ok) { Tank.forget(Tank.id); location.replace('/'); return null; }
+      return r.json();
+    })
+    .then(function (m) { if (m) { meta = m; renderMeta(); checkAccess(); } })
+    .catch(function () {});
+
+  // ── замок ──
+  // Страницу не прячем целиком: всё, что на ней видно, и так отдаётся по
+  // ссылке любому — рыбки, фоны, имя. Замок закрывает не показ, а руки:
+  // пока пароль не введён, ни одна кнопка до сервера не дойдёт.
+  var gate = document.getElementById('gate');
+  var gatePass = document.getElementById('gate-pass');
+  var gateBad = document.getElementById('gate-bad');
+  document.getElementById('gate-back').href = Tank.url;
+
+  function showGate(message) {
+    gate.hidden = false;
+    gateBad.hidden = !message;
+    gateBad.textContent = message || '';
+    gatePass.value = '';
+    gatePass.focus();
+  }
+
+  function checkAccess() {
+    // Фон меняют без пароля: это оформление, а не потеря детских рисунков.
+    if (ONLY === 'bg') return;
+    // Аквариум без пароля (заведён до того, как пароли появились) пускает
+    // всех; завести пароль предлагает меню аквариума.
+    if (!meta.locked) return;
+    if (!Tank.pass()) return showGate();
+    // Пароль в браузере может устареть: его сменили с другого устройства.
+    fetch(Tank.api + '/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: Tank.pass() })
+    }).then(function (r) {
+      if (r.ok) return;
+      Tank.setPass(Tank.id, null);
+      showGate(r.status === 429 ? 'Слишком много попыток, подожди минуту.' : 'Пароль устарел — введи новый.');
+    }, function () { /* сервер молчит: разберётся первая же правка */ });
+  }
+
+  function enterGate() {
+    var value = gatePass.value.trim();
+    if (!value) return;
+    var btn = document.getElementById('gate-go');
+    btn.disabled = true;
+    fetch(Tank.api + '/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: value })
+    }).then(function (r) {
+      btn.disabled = false;
+      if (r.ok) {
+        Tank.setPass(Tank.id, value);
+        gate.hidden = true;
+        return;
+      }
+      return r.json().catch(function () { return {}; }).then(function (e) {
+        showGate(r.status === 429
+          ? 'Слишком много попыток. Подожди ' + (e.retryAfter || 60) + ' с.'
+          : 'Пароль не подошёл.');
+      });
+    }, function () {
+      btn.disabled = false;
+      showGate('Сервер не отвечает.');
+    });
+  }
+
+  document.getElementById('gate-go').onclick = enterGate;
+  gatePass.onkeydown = function (e) { if (e.key === 'Enter') enterGate(); };
+
+  // Правка вернулась с отказом — значит пароль сменили или его тут нет.
+  // Показываем замок и не даём тыкать дальше вслепую.
+  function guard(r) {
+    if (r && (r.status === 401 || r.status === 429)) {
+      Tank.setPass(Tank.id, null);
+      showGate(r.status === 429 ? 'Слишком много попыток, подожди минуту.' : 'Нужен пароль аквариума.');
+      return false;
+    }
+    return true;
+  }
+
+  // Пароль — показать, сменить, задать впервые — живёт в меню аквариума,
+  // рядом с кодом и ссылкой: всё про доступ собрано в одном месте.
+
+  // Переименование живёт в меню аквариума: имя правят там, где его видно.
+
+  // Код аквариума и ссылку на него показывает меню самого аквариума —
+  // делиться удобнее оттуда, где аквариум перед глазами.
+
+  function paintCardThumbs() {
+    var slots = document.querySelectorAll('#grid [data-thumb]');
+    if (!slots.length) return;
+    FishThumbs.withPack(function (idx) {
+      slots.forEach(function (slot) {
+        var model = idx[slot.dataset.thumb];
+        if (!model) return;
+        FishThumbs.get(model, function (url) {
+          if (!url || !slot.parentNode) return;
+          var img = document.createElement('img');
+          img.src = url;
+          img.alt = '';
+          slot.parentNode.replaceChild(img, slot);
+        });
+      });
+    });
+  }
+
+  var titles = {};   // kind → русское название из манифеста
+  fetch('/assets/coloring/manifest.json')
+    .then(function (r) { return r.json(); })
+    .then(function (m) {
+      m.fish.forEach(function (f) { titles[f.name] = f.title; });
+      refresh();
+    })
+    .catch(refresh);
+
+  function fmtDate(iso) {
+    try { return new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return iso || ''; }
+  }
+
+  function fishName(item) {
+    return item.type === 'pack' ? (item.title || item.model) : (titles[item.kind] || item.kind);
+  }
+
+  function fishCard(item) {
+    var pack = item.type === 'pack';
+    var card = document.createElement('div');
+    card.className = 'card';
+
+    // У раскрашенной рыбки картинка — сам рисунок ребёнка. У покупной
+    // рисунка нет, поэтому в карточке рендерим ту же миниатюру, что
+    // и в выборе; до отрисовки стоит заглушка.
+    card.innerHTML =
+      (pack ? '<div class="ph" data-thumb="' + item.model + '"></div>'
+            : '<img src="' + Tank.api + '/fish/' + item.id + '/texture.png" alt="" loading="lazy">') +
+      '<div class="body">' +
+      '  <span class="name"></span>' +
+      '  <span class="date"></span>' +
+      '  <button class="danger">Удалить</button>' +
+      '</div>';
+
+    card.querySelector('.date').textContent = (pack ? 'из набора · ' : '') + fmtDate(item.created);
+
+    card.querySelector('button').onclick = function () {
+      var btn = this, shot = card.querySelector('img');
+      Modal.confirm({
+        title: 'Удалить рыбку?',
+        // Про рисунок говорим отдельно: он единственный здесь
+        // невосстановимый, и человеку важно знать, что копия остаётся.
+        text: pack
+          ? 'Она уплывёт из аквариума. Запустить такую же можно снова в любой момент.'
+          : 'Рисунок переедет в корзину на сервере — если что, его можно вернуть.',
+        image: shot ? shot.src : null,
+        caption: card.querySelector('.name').textContent
+      }).then(function (ok) {
+        if (!ok) return;
+        btn.disabled = true;
+        Tank.send(Tank.api + '/fish/' + item.id, { method: 'DELETE' })
+          .then(function (r) { guard(r); refresh(); }, refresh);
+      });
+    };
+    return card;
+  }
+
+  // Карточки живут между опросами. Раньше сетка собиралась заново каждые пять
+  // секунд, и браузер каждый раз перезагружал рисунки — на телефоне это
+  // выглядело как мигание всех рыбок. Теперь новые добавляются, ушедшие
+  // убираются, остальные остаются теми же узлами.
+  var cardById = {};
+
+  function refresh() {
+    fetch(Tank.api + '/fish').then(function (r) { return r.json(); }).then(function (list) {
+      var grid = document.getElementById('grid');
+      var seen = {};
+      document.getElementById('empty').hidden = list.length > 0;
+      document.getElementById('clearrow').hidden = !list.length;
+      document.getElementById('count').textContent = list.length ? 'рыбок: ' + list.length : '';
+
+      list.slice().reverse().forEach(function (item) {
+        seen[item.id] = true;
+        var card = cardById[item.id];
+        if (!card) card = cardById[item.id] = fishCard(item);
+        // Русское название приезжает манифестом позже самой рыбки.
+        card.querySelector('.name').textContent = fishName(item);
+        // Перестановка готового узла картинку не перезагружает.
+        grid.appendChild(card);
+      });
+
+      Object.keys(cardById).forEach(function (id) {
+        if (seen[id]) return;
+        cardById[id].remove();
+        delete cardById[id];
+      });
+
+      paintCardThumbs();
+    }).catch(function () {
+      document.getElementById('count').textContent = 'сервер недоступен — запусти node server.js';
+    });
+  }
+
+  document.getElementById('b-clear').onclick = function () {
+    var n = document.querySelectorAll('#grid .card').length;
+    if (!n) return;
+    Modal.confirm({
+      title: 'Очистить аквариум?',
+      text: 'Из аквариума уплывут все рыбки — ' + n + ' шт. Рисунки переедут в корзину ' +
+            'на сервере, вернуть их можно, но из списка они пропадут.',
+      confirmLabel: 'Удалить всех рыбок'
+    }).then(function (ok) {
+      if (!ok) return;
+      Tank.send(Tank.api + '/fish', { method: 'DELETE' })
+        .then(function (r) { guard(r); refresh(); }, refresh);
+    });
+  };
+
+  // ── настройки сцены аквариума ──
+  var sceneSettings = { background: null };
+
+  function renderSettings() {
+    document.querySelectorAll('.bgitem').forEach(function (t) {
+      t.dataset.on = (t.dataset.bg || null) === (sceneSettings.background || null) ? '1' : '0';
+    });
+  }
+
+  // ── галерея фонов ──
+  var bgBox = document.getElementById('bgs');
+  var bgFile = document.getElementById('bg-file');
+
+  function renderBackgrounds(list) {
+    bgBox.textContent = '';
+
+    var n = 0;
+    list.forEach(function (bg) {
+      // Имя файла человеку ничего не говорит, а подпись у карточки нужна:
+      // без неё плитки читаются как обрывки, а не как выбор из набора.
+      var title = bg.custom ? 'Свой фон' : 'Фон ' + (++n);
+
+      var item = document.createElement('button');
+      item.className = 'bgitem';
+      item.type = 'button';
+      item.dataset.bg = bg.name;
+      item.title = title;
+      item.onclick = function () { postSettings({ background: bg.name }); };
+
+      var img = document.createElement('img');
+      img.src = bg.url;
+      img.alt = '';
+      img.loading = 'lazy';
+      item.appendChild(img);
+
+      var cap = document.createElement('span');
+      cap.className = 't';
+      cap.textContent = title;
+      item.appendChild(cap);
+
+      // Удалять можно только свои: встроенные сервер защищает и сам.
+      if (bg.custom) {
+        var del = document.createElement('span');
+        del.className = 'bgdel';
+        del.textContent = '×';
+        del.title = 'Удалить этот фон';
+        del.onclick = function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+          Modal.confirm({
+            title: 'Удалить фон?',
+            text: 'Файл будет стёрт безвозвратно — в отличие от рыбок, копии не остаётся.',
+            image: bg.url
+          }).then(function (ok) {
+            if (!ok) return;
+            Tank.send(Tank.api + '/backgrounds/' + encodeURIComponent(bg.name), { method: 'DELETE' })
+              .then(function (r) { guard(r); return loadBackgrounds(); }, loadBackgrounds);
+          });
+        };
+        item.appendChild(del);
+      }
+
+      bgBox.appendChild(item);
+    });
+
+    var add = document.createElement('button');
+    add.className = 'bgadd';
+    add.id = 'bg-add';
+    add.type = 'button';
+    add.innerHTML = '<span class="plus">+</span><span class="t">свой фон</span>';
+    add.onclick = function () { bgFile.click(); };
+    bgBox.appendChild(add);
+
+    renderSettings();
+  }
+
+  function loadBackgrounds() {
+    return fetch(Tank.api + '/backgrounds')
+      .then(function (r) { return r.json(); })
+      .then(renderBackgrounds)
+      .then(function () {
+        // фон могли удалить прямо сейчас — перечитываем, что стоит в сцене
+        return fetch(Tank.api + '/settings').then(function (r) { return r.json(); });
+      })
+      .then(function (s) { sceneSettings = s; renderSettings(); })
+      .catch(function () {});
+  }
+
+  // Ужимаем на клиенте: с телефона прилетает 4000 px и 8 МБ, а фону хватает
+  // ширины экрана. Заодно не упираемся в лимит тела запроса на сервере.
+  var BG_MAX_W = 2560;          // шире этого — уменьшаем
+  var BG_KEEP_MAX = 4 * 1024 * 1024;   // до этого размера отправляем оригинал как есть
+
+  function prepare(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+
+      img.onload = function () {
+        var k = Math.min(1, BG_MAX_W / img.width);
+
+        // Картинка и так по размеру — шлём оригинальные байты. Прогон через
+        // canvas ничего бы не выиграл: он переупаковывает PNG хуже, чем это
+        // сделал исходный кодировщик, и файл только растёт.
+        if (k === 1 && file.size <= BG_KEEP_MAX) {
+          URL.revokeObjectURL(url);
+          var fr = new FileReader();
+          fr.onload = function () { resolve(fr.result); };
+          fr.onerror = function () { reject(new Error('не удалось прочитать файл')); };
+          fr.readAsDataURL(file);
+          return;
+        }
+
+        // Пережимаем. Фон всегда непрозрачный, поэтому JPEG — он вчетверо
+        // легче PNG на фотографиях и подводных градиентах.
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.width * k);
+        c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.88));
+      };
+
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('это не картинка')); };
+      img.src = url;
+    });
+  }
+
+  bgFile.onchange = function () {
+    var file = bgFile.files && bgFile.files[0];
+    bgFile.value = '';   // чтобы повторный выбор того же файла тоже сработал
+    if (!file) return;
+
+    var add = document.getElementById('bg-add');
+    if (add) { add.dataset.busy = '1'; add.innerHTML = '<span>загружаю…</span>'; }
+
+    prepare(file)
+      .then(function (dataUrl) {
+        return Tank.send(Tank.api + '/backgrounds', {
+          body: JSON.stringify({ image: dataUrl })
+        }).then(function (r) {
+          // Отказ по паролю разбирает замок, окно об ошибке тут лишнее.
+          if (!guard(r)) return null;
+          return r.json();
+        });
+      })
+      .then(function (r) {
+        if (!r) return loadBackgrounds();
+        if (r.error) throw new Error(r.error);
+        return loadBackgrounds().then(function () {
+          return postSettings({ background: r.name });   // сразу показываем загруженный
+        });
+      })
+      .catch(function (e) {
+        Modal.alert({ title: 'Фон не загрузился', text: String(e.message || e) });
+        return loadBackgrounds();
+      });
+  };
+
+  loadBackgrounds();
+
+  function postSettings(patch) {
+    return Tank.send(Tank.api + '/settings', {
+      body: JSON.stringify(patch)
+    }).then(function (r) {
+      // Отказ уже показал замок — дальше молча, без окон об ошибке.
+      if (!guard(r) || !r.ok) return null;
+      return r.json();
+    }).then(function (s) {
+      if (!s) return null;
+      sceneSettings = s;
+      renderSettings();
+      return s;
+    });
+  }
+
+
+  setInterval(refresh, 5000);
+})();
+</script>
+</body>
+</html>

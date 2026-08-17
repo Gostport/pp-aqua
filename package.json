@@ -1,0 +1,16 @@
+{
+  "name": "aqua-sketch-tank",
+  "version": "1.0.0",
+  "description": "Аквариум с раскрасками: ребёнок раскрашивает лист, фотографирует — и рыбка плывёт в 3D-сцене",
+  "license": "MIT",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "coloring": "node tools/make-coloring.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
