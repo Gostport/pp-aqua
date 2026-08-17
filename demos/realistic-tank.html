@@ -1031,6 +1031,30 @@
   var packModels = {};   // name → {gltf, info} | 'loading'
   var packList = null;
 
+  // Клип у части моделей «везёт» рыбу вперёд: в нём есть дорожка позиции
+  // корня, сдвигающая её на четыре-пять корпусов. По аквариуму рыбу возим мы,
+  // поэтому такую дорожку убираем — иначе модель уезжает от собственного
+  // места, а на стыке цикла прыгает обратно. Мелкие смещения (челюсть,
+  // плавник) не трогаем: убираем только те, что сравнимы с длиной тела.
+  function stripRootMotion(clip, bodyLen) {
+    var limit = bodyLen * 0.5;
+    clip.tracks = clip.tracks.filter(function (tr) {
+      if (!/\.position$/.test(tr.name)) return true;
+      var v = tr.values, n = v.length / 3;
+      var lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+      for (var i = 0; i < n; i++) {
+        for (var c = 0; c < 3; c++) {
+          var x = v[i * 3 + c];
+          if (x < lo[c]) lo[c] = x;
+          if (x > hi[c]) hi[c] = x;
+        }
+      }
+      var move = Math.sqrt(
+        Math.pow(hi[0] - lo[0], 2) + Math.pow(hi[1] - lo[1], 2) + Math.pow(hi[2] - lo[2], 2));
+      return move < limit;
+    });
+  }
+
   function withPackModel(name, cb) {
     var cached = packModels[name];
     if (cached && cached !== 'loading') return cb(cached);
@@ -1047,6 +1071,10 @@
           length: known && known.length ? known.length : PACK_LEN
         };
         spec.info = normalizeFish(gltf.scene, spec.length, FishFrame.fromSkeleton(gltf));
+        var b = FishFrame.bounds(gltf.scene);
+        (gltf.animations || []).forEach(function (clip) {
+          stripRootMotion(clip, Math.max(b.size.x, b.size.y, b.size.z));
+        });
         packModels[name] = spec;
         cb(spec);
       }, undefined, function (err) {

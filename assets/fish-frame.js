@@ -143,7 +143,15 @@
   // плавник тонкий, значит спина там, где пусто.
   function orientQuat(axes, headAtMax, b) {
     var forward = axisVec(axes.body, headAtMax ? 1 : -1);
-    var upVec = axisVec(axes.up, b.centroid[axes.up] < b.center[axes.up] ? 1 : -1);
+    // Где у рыбы спина. glTF авторится «Y вверх», и если ось «вверх» совпала
+    // с Y — доверяем этому. Прикидка по массе (брюхо тяжелее спины) остаётся
+    // запасной: на покупном паке она верна у 27 моделей из 28, а спинорога
+    // переворачивала кверху брюхом — у него плавники сверху крупнее брюха,
+    // и центр масс уезжает выше центра габарита. У рыбы-бабочки запас был
+    // 0.4% — то есть следующей перевернулась бы она.
+    var upVec = axes.up === 'y'
+      ? axisVec('y', 1)
+      : axisVec(axes.up, b.centroid[axes.up] < b.center[axes.up] ? 1 : -1);
     var right = new THREE.Vector3().crossVectors(upVec, forward);
     return new THREE.Quaternion()
       .setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, upVec, forward))
