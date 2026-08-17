@@ -1,0 +1,24 @@
+# Домен и почта приезжают из .env через docker-compose.
+{
+	email {$AQUA_EMAIL}
+}
+
+{$AQUA_DOMAIN} {
+	# Сервер отдаёт три.js и модели как есть — сжатие заметно ускоряет
+	# первую загрузку сцены.
+	encode zstd gzip
+
+	# Картинки рыбок и снимки сцен ходят большими телами.
+	request_body {
+		max_size 16MB
+	}
+
+	reverse_proxy aqua:8000
+
+	log {
+		output file /data/access.log {
+			roll_size 10MB
+			roll_keep 5
+		}
+	}
+}

@@ -55,8 +55,66 @@ const path = require('path');
 const os = require('os');
 
 const ROOT = __dirname;
-const PORT = 8000;
+const PORT = Number(process.env.PORT) || 8000;
 const MAX_BODY = 12 * 1024 * 1024;
+
+// ── пределы ────────────────────────────────────────────────────────────────
+// Дома они не нужны: рыбок заводит ребёнок, а не бот. В интернете нужны:
+// завести аквариум и налить в него картинок может кто угодно со ссылкой —
+// это осознанное решение (ребёнок снимает лист с телефона, пароля у него
+// нет), но диск от него надо чем-то прикрыть.
+//
+// Числа с запасом на семью и меняются переменными окружения.
+const LIMITS = {
+  tanks: Number(process.env.AQUA_MAX_TANKS) || 200,          // всего аквариумов
+  tanksPerHour: Number(process.env.AQUA_TANKS_PER_HOUR) || 5, // с одного адреса
+  fish: Number(process.env.AQUA_MAX_FISH) || 40,             // рыбок в аквариуме
+  backgrounds: Number(process.env.AQUA_MAX_BG) || 8,         // своих фонов
+  fishBytes: 3 * 1024 * 1024,                                // картинка рыбки
+  bgBytes: 6 * 1024 * 1024,                                  // картинка фона
+  dataMB: Number(process.env.AQUA_MAX_DATA_MB) || 2048       // вся папка data
+};
+
+// Адрес клиента: за обратным прокси настоящий приходит в X-Forwarded-For,
+// напрямую — в сокете. Ключ нужен только для счётчика, точность не важна.
+function clientKey(req) {
+  const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return fwd || req.socket.remoteAddress || '?';
+}
+
+// Сколько занимает data. Считаем не чаще раза в минуту: обход папки дешёвый,
+// но дёргать его на каждую загрузку картинки незачем.
+let dataSize = { bytes: 0, at: 0 };
+function dataBytes() {
+  if (Date.now() - dataSize.at < 60 * 1000) return dataSize.bytes;
+  let total = 0;
+  const walk = (dir) => {
+    let items = [];
+    try { items = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+    for (const it of items) {
+      const full = path.join(dir, it.name);
+      if (it.isDirectory()) walk(full);
+      else { try { total += fs.statSync(full).size; } catch (e) { /* исчез — и ладно */ } }
+    }
+  };
+  walk(path.join(ROOT, 'data'));
+  dataSize = { bytes: total, at: Date.now() };
+  return total;
+}
+
+function diskFull() {
+  return dataBytes() > LIMITS.dataMB * 1024 * 1024;
+}
+
+function tanksCount() {
+  try { return fs.readdirSync(TANKS).length; } catch (e) { return 0; }
+}
+
+// Картинка приезжает строкой dataURL: раскодированный размер — три четверти
+// от неё, проверять его до записи дешевле, чем писать и удалять.
+function tooHeavy(dataUrl, limit) {
+  return Math.ceil(String(dataUrl).length * 0.75) > limit;
+}
 
 const TANKS = path.join(ROOT, 'data', 'tanks');
 const TANKS_TRASH = path.join(ROOT, 'data', 'trash-tanks');
@@ -135,6 +193,20 @@ function listPack() {
 //
 // Здесь же счётчик неудачных паролей: он тоже про «прямо сейчас» и тоже
 // не переживает перезапуск.
+// Сколько аквариумов завели с адреса за последний час. Память, а не диск:
+// перезапуск сбрасывает — и пусть, это защита от скуки, а не от осады.
+const newTanks = new Map();
+function allowNewTank(key) {
+  const hour = 60 * 60 * 1000;
+  const now = Date.now();
+  const fresh = (newTanks.get(key) || []).filter((t) => now - t < hour);
+  if (fresh.length >= LIMITS.tanksPerHour) { newTanks.set(key, fresh); return false; }
+  fresh.push(now);
+  newTanks.set(key, fresh);
+  if (newTanks.size > 5000) newTanks.clear();     // не растём без края
+  return true;
+}
+
 const events = new Map();
 function tankEvents(id) {
   if (!events.has(id)) events.set(id, { feedAt: 0, fails: 0, blockUntil: 0 });
@@ -372,6 +444,7 @@ function handleTankApi(req, res, t, url) {
   // Снимок сцены для карточки на главной. Присылает сама сцена, когда
   // в аквариуме что-то изменилось.
   if (req.method === 'POST' && url === '/preview') {
+    if (diskFull()) return send(res, 507, '{"error":"на сервере кончилось место"}');
     return readBody(req, res, (data) => {
       const m = /^data:image\/jpeg;base64,/.exec(data.image || '');
       if (!m) return send(res, 400, '{"error":"нужен image: dataURL jpeg"}');
@@ -452,6 +525,10 @@ function handleTankApi(req, res, t, url) {
   //                  внутри модели.
   // У старых записей поля type нет — они раскрашенные по умолчанию.
   if (req.method === 'POST' && url === '/fish') {
+    if (listFish(t).length >= LIMITS.fish) {
+      return send(res, 409, JSON.stringify({ error: 'в аквариуме уже ' + LIMITS.fish + ' рыбок — тесно' }));
+    }
+    if (diskFull()) return send(res, 507, '{"error":"на сервере кончилось место"}');
     return readBody(req, res, (data) => {
       const fid = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
 
@@ -469,6 +546,9 @@ function handleTankApi(req, res, t, url) {
 
       if (!data.kind || !/^data:image\/(png|jpeg);base64,/.test(data.texture || '')) {
         return send(res, 400, '{"error":"нужны kind и texture (dataURL png/jpeg)"}');
+      }
+      if (tooHeavy(data.texture, LIMITS.fishBytes)) {
+        return send(res, 413, '{"error":"картинка рыбки слишком тяжёлая"}');
       }
       ensureTank(t);
       const png = Buffer.from(data.texture.split(',')[1], 'base64');
@@ -504,9 +584,16 @@ function handleTankApi(req, res, t, url) {
   // Имя файла придумывает сервер — так в папку не попадёт ни «../»,
   // ни перезапись чужого файла одинаковым именем.
   if (req.method === 'POST' && url === '/backgrounds') {
+    if (readDirSafe(t.backgrounds).length >= LIMITS.backgrounds) {
+      return send(res, 409, JSON.stringify({ error: 'своих фонов уже ' + LIMITS.backgrounds }));
+    }
+    if (diskFull()) return send(res, 507, '{"error":"на сервере кончилось место"}');
     return readBody(req, res, (data) => {
       const m = /^data:image\/(png|jpeg|webp);base64,/.exec(data.image || '');
       if (!m) return send(res, 400, '{"error":"нужен image: dataURL png/jpeg/webp"}');
+      if (tooHeavy(data.image, LIMITS.bgBytes)) {
+        return send(res, 413, '{"error":"фон слишком тяжёлый"}');
+      }
       const buf = Buffer.from(data.image.slice(m[0].length), 'base64');
       if (!buf.length) return send(res, 400, '{"error":"пустая картинка"}');
       ensureTank(t);
@@ -577,6 +664,12 @@ function handleApi(req, res, url) {
   }
 
   if (req.method === 'POST' && url === '/api/tanks') {
+    if (tanksCount() >= LIMITS.tanks) {
+      return send(res, 507, '{"error":"на сервере больше нет места для новых аквариумов"}');
+    }
+    if (!allowNewTank(clientKey(req))) {
+      return send(res, 429, '{"error":"слишком часто; попробуй через час"}');
+    }
     return readBody(req, res, (data) => {
       const id = newTankId();
       const t = tank(id);
