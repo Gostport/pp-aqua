@@ -573,18 +573,26 @@
     return loaderShared;
   }
 
-  // Сколько взмахов в секунду в клипе как он есть. Автор пака гнал анимацию
-  // «на месте», не думая о том, с какой скоростью рыба поплывёт у нас: у части
-  // моделей клип бьёт 2.1 Гц, у части 0.67 — при одинаковой скорости в сцене
-  // одна выглядит как торопливая мошка, другая еле шевелится.
+  // Плавники и тело различаем по именам костей: в этом паке плавники так
+  // и названы (Discus1_fin_l_4_tip41), а позвоночник — Bone01…Bone13.
+  var FIN_BONE = /fin|pect|dors|anal|pelv|tip/i;
+
+  // Сколько взмахов ТЕЛОМ в секунду в клипе как он есть, и есть ли они вообще.
+  // Автор пака гнал анимацию «на месте», не думая о том, с какой скоростью
+  // рыба поплывёт у нас: у части моделей тело бьёт 0.67 Гц, у части — 1.2.
   //
-  // Меряем по самой размашистой кости: сколько раз её вращение перешло
+  // А у семи видов из двенадцати тело в клипе не двигается ВОВСЕ: машут одни
+  // плавники, а вперёд рыбу везла дорожка позиции, которую мы срезаем. Для
+  // них возвращаем ноль — это знак, что изгиб придётся делать самим.
+  //
+  // Меряем по самой размашистой кости тела: сколько раз её вращение перешло
   // среднее значение, столько и полувзмахов.
   function clipBeatHz(clip) {
     var best = 0, bestSpan = 0;
     for (var t = 0; t < clip.tracks.length; t++) {
       var tr = clip.tracks[t];
       if (!(tr instanceof THREE.QuaternionKeyframeTrack)) continue;
+      if (FIN_BONE.test(tr.name)) continue;
       var v = tr.values, n = v.length / 4;
       if (n < 4) continue;
       // компонента с наибольшим размахом: у рыскания хвостом это обычно y
@@ -607,7 +615,7 @@
         best = cross / 2 / dur;
       }
     }
-    return best > 0.05 ? best : 1;
+    return best > 0.05 ? best : 0;
   }
 
   function spawnFromModel(spec, index) {
@@ -617,7 +625,8 @@
     pivot.scale.setScalar(spec.info.scale);
     pivot.add(clone);
 
-    var mixer = null, beatHz = 1;
+    // beatHz = 0 значит «клип тело не гнёт» — в том числе когда клипа нет вовсе.
+    var mixer = null, beatHz = 0;
     if (spec.gltf.animations && spec.gltf.animations.length) {
       mixer = new THREE.AnimationMixer(clone);
       var clip = spec.gltf.animations[0];
@@ -649,9 +658,11 @@
         o.material = addCaustics(o.material.clone(), 0.5);
         o.material.envMapIntensity = 0.5;
       }
-      // нет скелета — значит рыба «деревянная»: гнём её сами
-      var bend = spec.bend !== undefined ? spec.bend : 0.4;
-      if (!mixer && bend > 0) addBend(o.material, spec.info, bend, phase);
+      // Тело гнём сами, если его не гнёт клип: либо скелета нет вовсе, либо
+      // в клипе шевелятся одни плавники (см. clipBeatHz). Скиннинг при этом
+      // остаётся — плавники продолжают работать от своего клипа.
+      var bend = beatHz ? 0 : (spec.bend || 0.35);
+      if (bend > 0) addBend(o.material, spec.info, bend, phase);
     });
 
     var group = new THREE.Group();
@@ -795,8 +806,16 @@
     // быстрым клипом молотит хвостом втрое чаще, чем продвигается, и это
     // первое, что бросается в глаза.
     if (this.mixer) {
-      var want = BEATS_PER_LENGTH * this.vel.length() / this.len;   // взмахов в секунду
-      var scale = want / this.beatHz;
+      var scale;
+      if (this.beatHz) {
+        // Клип гнёт тело: подгоняем темп под путь.
+        var want = BEATS_PER_LENGTH * this.vel.length() / this.len;   // взмахов в секунду
+        scale = want / this.beatHz;
+      } else {
+        // Клип шевелит только плавники — тело гнётся шейдером. Плавникам
+        // темп от длины тела ни к чему, им хватает мягкой связи со скоростью.
+        scale = 0.6 + this.vel.length() / this.speed * 0.6;
+      }
       this.mixer.update(dt * Math.max(0.25, Math.min(2, scale)));
     }
   };
