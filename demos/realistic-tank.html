@@ -590,9 +590,15 @@
       if (spec.paintedTex) {
         // детская раскраска: текстура ложится по планарной UV шаблона,
         // сверху — бегущая каустика, единственный оставшийся «подводный» эффект
+        //
+        // skinning обязателен: в three r128 материал без этого флага
+        // компилируется без скиннинга, и рыба остаётся в позе привязки —
+        // скелет машет хвостом, а меш стоит доской. Заводской материал
+        // покупной рыбы флаг получает от GLTFLoader, наш — нет.
         o.material = addCaustics(new THREE.MeshStandardMaterial({
           map: spec.paintedTex, roughness: 0.55, metalness: 0.05,
-          side: THREE.DoubleSide, envMapIntensity: 0.5
+          side: THREE.DoubleSide, envMapIntensity: 0.5,
+          skinning: !!o.isSkinnedMesh
         }), 0.5);
       } else {
         // рыба со своей заводской текстурой — показываем как есть,
