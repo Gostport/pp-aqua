@@ -22,7 +22,7 @@ curl -fsSL https://get.docker.com | sh
 **2. Код**
 
 ```bash
-git clone <адрес репозитория> /opt/aqua
+git clone https://github.com/<логин>/paper-aquarium.git /opt/aqua
 cd /opt/aqua
 ```
 

@@ -141,7 +141,7 @@ docker compose up -d --build
 пак в исходном разрешении).
 
 ```
-009 aqua/
+paper-aquarium/
 └── купил 3д рыбок/
     └── fbx/
         ├── Auriga Butterflyfish.fbx
