@@ -1,0 +1,15 @@
+# Переводы строк одинаковые у всех, независимо от системы.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.glb binary
+
+# Чужой код и сгенерированное не должны попадать в статистику языков —
+# иначе гитхаб решит, что проект написан на three.js.
+vendor/** linguist-vendored
+assets/coloring/*.svg linguist-generated
+assets/coloring/manifest.json linguist-generated
+tools/contours.json linguist-generated
+tools/inner-fins.json linguist-generated
+docs/screenshots/* linguist-documentation
