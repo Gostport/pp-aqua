@@ -91,8 +91,8 @@ npx -y obj2gltf@3 -i fish.obj -o ../../assets/models/fish.glb
 
 ### ✅ В игре стоит купленный пак
 
-«Coral Reef Fish Collection Animated — Game Ready pack 8» (автор JosKata,
-CGTrader #4769606), 30 рифовых рыб, лицензия **Royalty Free** — коммерческое
+[«Coral Reef Fish Collection animated — Game Ready pack 8»](https://www.cgtrader.com/3d-model-collections/coral-reef-fish-collection-animated-game-ready-pack-8)
+(автор JosKata, CGTrader), 30 рифовых рыб, лицензия **Royalty Free** — коммерческое
 использование и модификация разрешены, запрещены перепродажа файлов и обучение
 на них нейросетей. Архивы в папке `купил 3д рыбок/`, счёт-invoice там же.
 FBX → glTF собирает `tools/convert-pack.ps1`.
