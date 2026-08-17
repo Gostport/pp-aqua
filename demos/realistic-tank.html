@@ -282,6 +282,10 @@
   // Отступ, с которого рыбу начинает отталкивать от стенки, и запас у пола.
   // Держим здесь, чтобы отладочная рамка рисовалась ровно по тем же числам,
   // по которым считается плавание.
+  // Сколько взмахов хвостом приходится на корпус пройденного пути. У живых
+  // рыб это около единицы; меньше — рыба «скользит», больше — суетится.
+  var BEATS_PER_LENGTH = 0.85;
+
   var MARGIN = 1.6;
   var FLOOR_ROOM = 0.9;    // насколько выше пола разворачивает вверх
 
@@ -569,6 +573,43 @@
     return loaderShared;
   }
 
+  // Сколько взмахов в секунду в клипе как он есть. Автор пака гнал анимацию
+  // «на месте», не думая о том, с какой скоростью рыба поплывёт у нас: у части
+  // моделей клип бьёт 2.1 Гц, у части 0.67 — при одинаковой скорости в сцене
+  // одна выглядит как торопливая мошка, другая еле шевелится.
+  //
+  // Меряем по самой размашистой кости: сколько раз её вращение перешло
+  // среднее значение, столько и полувзмахов.
+  function clipBeatHz(clip) {
+    var best = 0, bestSpan = 0;
+    for (var t = 0; t < clip.tracks.length; t++) {
+      var tr = clip.tracks[t];
+      if (!(tr instanceof THREE.QuaternionKeyframeTrack)) continue;
+      var v = tr.values, n = v.length / 4;
+      if (n < 4) continue;
+      // компонента с наибольшим размахом: у рыскания хвостом это обычно y
+      for (var c = 0; c < 3; c++) {
+        var min = Infinity, max = -Infinity, sum = 0;
+        for (var i = 0; i < n; i++) {
+          var x = v[i * 4 + c];
+          if (x < min) min = x;
+          if (x > max) max = x;
+          sum += x;
+        }
+        var span = max - min;
+        if (span <= bestSpan) continue;
+        var mean = sum / n, cross = 0;
+        for (var j = 1; j < n; j++) {
+          if ((v[(j - 1) * 4 + c] - mean) * (v[j * 4 + c] - mean) < 0) cross++;
+        }
+        var dur = tr.times[tr.times.length - 1] || 1;
+        bestSpan = span;
+        best = cross / 2 / dur;
+      }
+    }
+    return best > 0.05 ? best : 1;
+  }
+
   function spawnFromModel(spec, index) {
     var clone = THREE.SkeletonUtils.clone(spec.gltf.scene);
     var pivot = new THREE.Group();
@@ -576,10 +617,12 @@
     pivot.scale.setScalar(spec.info.scale);
     pivot.add(clone);
 
-    var mixer = null;
+    var mixer = null, beatHz = 1;
     if (spec.gltf.animations && spec.gltf.animations.length) {
       mixer = new THREE.AnimationMixer(clone);
-      var act = mixer.clipAction(spec.gltf.animations[0]);
+      var clip = spec.gltf.animations[0];
+      beatHz = clipBeatHz(clip);
+      var act = mixer.clipAction(clip);
       act.time = Math.random() * 2;   // рассинхронизируем взмахи
       act.play();
     }
@@ -613,7 +656,7 @@
 
     var group = new THREE.Group();
     group.add(pivot);
-    return { group: group, mixer: mixer, phase: phase };
+    return { group: group, mixer: mixer, phase: phase, beatHz: beatHz };
   }
 
   function Fish(spec, index) {
@@ -622,6 +665,8 @@
     this.spec = spec;
     this.mesh = built.group;
     this.mixer = built.mixer;
+    this.beatHz = built.beatHz;
+    this.len = spec.length || 2;
     // Половина длины рыбы: на неё поджимаются границы, чтобы за край кадра
     // не торчал ни нос, ни хвост.
     this.radius = (spec.length || 2) * 0.5;
@@ -743,8 +788,17 @@
     this.mesh.lookAt(_l.copy(this.pos).add(this.vel));
     this.mesh.rotation.z += Math.sin(t * 2.5 + this.phase) * 0.015;
 
-    // скелетная анимация Swim там, где она есть; изгиб шейдером — где нет
-    if (this.mixer) this.mixer.update(dt * (0.6 + this.vel.length() / this.speed * 0.6));
+    // Скелетная анимация Swim там, где она есть; изгиб шейдером — где нет.
+    //
+    // Скорость клипа считаем от пути, а не берём как записано: рыба должна
+    // делать примерно один взмах на корпус длины. Иначе крупный ангел с
+    // быстрым клипом молотит хвостом втрое чаще, чем продвигается, и это
+    // первое, что бросается в глаза.
+    if (this.mixer) {
+      var want = BEATS_PER_LENGTH * this.vel.length() / this.len;   // взмахов в секунду
+      var scale = want / this.beatHz;
+      this.mixer.update(dt * Math.max(0.25, Math.min(2, scale)));
+    }
   };
 
   // ── корм: кнопка «Покормить» в админке ───────────────────────────────────
