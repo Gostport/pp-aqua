@@ -42,6 +42,7 @@
       'home.bycode.open': 'Открыть',
       // Четыре шага для того, кто пришёл впервые: увидел рилс — а дальше что?
       'home.how.title': 'Как это работает',
+      'home.how.s0': 'Создай аквариум',
       'home.how.s1': 'Распечатай раскраску',
       'home.how.s2': 'Раскрась фломастерами',
       'home.how.s3': 'Сфотографируй телефоном',
@@ -286,6 +287,7 @@
       'home.bycode.placeholder': 'for example, mk4dp7wq2f',
       'home.bycode.open': 'Open',
       'home.how.title': 'How it works',
+      'home.how.s0': 'Create an aquarium',
       'home.how.s1': 'Print a colouring sheet',
       'home.how.s2': 'Colour it with markers',
       'home.how.s3': 'Photograph it with a phone',
@@ -520,6 +522,7 @@
       'home.bycode.placeholder': 'na przykład mk4dp7wq2f',
       'home.bycode.open': 'Otwórz',
       'home.how.title': 'Jak to działa',
+      'home.how.s0': 'Załóż akwarium',
       'home.how.s1': 'Wydrukuj kolorowankę',
       'home.how.s2': 'Pokoloruj ją flamastrami',
       'home.how.s3': 'Sfotografuj telefonem',

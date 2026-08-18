@@ -65,7 +65,7 @@
   .how .howbody { padding: 4px 18px 18px; }
   .hsteps {
     list-style: none; counter-reset: step; margin: 0 0 14px; padding: 0;
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 12px;
   }
   .hsteps li {
@@ -94,6 +94,9 @@
     color: var(--ink); text-decoration: none;
     transition: transform .2s cubic-bezier(.2,.7,.2,1), border-color .2s, box-shadow .2s;
   }
+  /* display: flex сильнее браузерного [hidden]: без этого правила скрытая
+     карточка витрины (демо не настроено) всё равно торчала бы пустой рамкой. */
+  .tank[hidden] { display: none; }
   .tank:hover { transform: translateY(-3px); border-color: rgba(88,214,255,.45); box-shadow: 0 20px 54px rgba(0,20,40,.5); }
 
   /* Окошко в аквариум. Снимок делает сама сцена, когда там что-то меняется;
@@ -218,6 +221,7 @@
     <summary><span class="chev">▸</span><span data-t="home.how.title"></span></summary>
     <div class="howbody">
       <ol class="hsteps">
+        <li><span class="ico">🌊</span><span data-t="home.how.s0"></span></li>
         <li><span class="ico">🖨️</span><span data-t="home.how.s1"></span></li>
         <li><span class="ico">🖍️</span><span data-t="home.how.s2"></span></li>
         <li><span class="ico">📷</span><span data-t="home.how.s3"></span></li>
