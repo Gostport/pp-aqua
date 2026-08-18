@@ -1520,6 +1520,9 @@
   // чтобы гость не отправил рыбку ребёнка в чужой аквариум: остаются корм,
   // «заведи свой» и дорога к списку. Имя и пароль витрины тоже не трогают.
   var DEMO = /(^|[?&])demo(=|&|$)/.test(location.search);
+  // Открыто по пину с главной (?tv): это экран-витрина, меню в пустом
+  // аквариуме само не выскакивает — им управляют с телефона, а тут смотрят.
+  var TV = /(^|[?&])tv(=|&|$)/.test(location.search);
   if (DEMO) {
     // «Мои аквариумы» тоже прячем: он вёл туда же, куда «Завести свой».
     ['m-capture', 'm-pack', 'm-print', 'm-bg', 'm-fish', 'm-share', 'm-home']
@@ -2040,7 +2043,7 @@
       // а телефону так не нужны ни код, ни меню — только камера.
       if (!n) drawQr(document.getElementById('steps-qr'), tankLink() + '/capture');
     }
-    if (first && !n && !menuUsed) showMenu();
+    if (first && !n && !menuUsed && !TV) showMenu();
     else if (first && !hintSeen()) tapHint.hidden = false;
   }
 

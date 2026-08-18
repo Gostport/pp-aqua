@@ -513,7 +513,9 @@
     if (/^\d{5}$/.test(v)) {
       fetch('/api/pin/' + v)
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-        .then(function (d) { location.href = '/t/' + d.id; })
+        // ?tv: по пину открывают экран-витрину (телевизор), меню там само
+        // не выскакивает — этим экраном любуются, а управляют с телефона.
+        .then(function (d) { location.href = '/t/' + d.id + '?tv'; })
         .catch(function (status) {
           var many = status === 429;
           Modal.alert({
