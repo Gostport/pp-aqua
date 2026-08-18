@@ -165,11 +165,17 @@
   .empty { color: var(--muted); padding: 10px 0 26px; }
 
   .bycode {
-    max-width: 460px; margin: 0 0 40px;
+    flex: 0 1 330px;
     background: var(--card); border: 1px solid var(--line); border-radius: 16px;
     padding: 16px 18px;
   }
-  .langrow { display: flex; justify-content: flex-end; margin: 6px 0 0; }
+  /* На узком экране карточка съезжает под заголовок и стоит одна на строке:
+     330 px посреди пустой ширины выглядят обрезком, поэтому там она
+     растягивается во всю полосу — как карточки аквариумов под ней. */
+  @media (max-width: 760px) {
+    .bycode { flex-basis: 100%; }
+  }
+  .langrow { display: flex; justify-content: flex-end; margin: -4px 0 6px; }
   .langpick { display: inline-flex; gap: 4px; }
   .langpick button {
     appearance: none; cursor: pointer; font: inherit; font-size: 11.5px; letter-spacing: .5px;
@@ -210,7 +216,18 @@
       <h1 data-t="home.title">Мои аквариумы</h1>
       <p data-t="home.lead"></p>
     </header>
-    <div class="langrow"><span id="lang"></span></div>
+
+    <!-- Ввод кода стоит рядом с заголовком: с пином это первое действие
+         телевизора, и внизу страницы его искали дольше всего. -->
+    <div class="bycode">
+      <div class="langrow"><span id="lang"></span></div>
+      <h3 data-t="home.bycode.title"></h3>
+      <p data-t="home.bycode.hint"></p>
+      <form id="code-form">
+        <input id="code" data-t-ph="home.bycode.placeholder" autocomplete="off" spellcheck="false" maxlength="10">
+        <button class="btn" type="submit" data-t="home.bycode.open"></button>
+      </form>
+    </div>
   </div>
 
   <!-- Инструкция читается один раз, а места просит много, поэтому живёт
@@ -240,18 +257,6 @@
 
   <div class="empty" id="empty" data-t="home.empty" hidden></div>
   <div class="tanks" id="tanks"></div>
-
-  <!-- Код нужен только второму устройству, а не новичку, поэтому поле стоит
-       после списка: кто пришёл с кодом, тот его ищет — и найдёт, а новичка
-       оно раньше только путало: «какой ещё код?». -->
-  <div class="bycode">
-    <h3 data-t="home.bycode.title"></h3>
-    <p data-t="home.bycode.hint"></p>
-    <form id="code-form">
-      <input id="code" data-t-ph="home.bycode.placeholder" autocomplete="off" spellcheck="false" maxlength="10">
-      <button class="btn" type="submit" data-t="home.bycode.open"></button>
-    </form>
-  </div>
 
   <footer>
     <p style="margin:0 0 8px"><a href="/terms.html" data-t="home.terms"></a></p>
