@@ -360,6 +360,43 @@ function listFish(t) {
 
 // Удаление — это перенос в корзину аквариума: детский рисунок жалко терять
 // из-за случайного клика. Вернуть рыбку = перенести пару файлов обратно.
+// ── корзина ────────────────────────────────────────────────────────────────
+// Удаление — перенос: ребёнок стирает рисунок случайно, и вернуть его должно
+// быть можно. Но «вечная корзина» на публичном сервере превращается в склад
+// чужих детских рисунков, которые человек считает удалёнными. Поэтому через
+// TRASH_DAYS корзина чистится по-настоящему — ровно так, как обещано
+// на странице «Правила и данные».
+const TRASH_DAYS = Number(process.env.AQUA_TRASH_DAYS) || 30;
+
+function purgeOld(dir, ttlMs) {
+  let items = [];
+  try { items = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return 0; }
+  let gone = 0;
+  const now = Date.now();
+  for (const it of items) {
+    const full = path.join(dir, it.name);
+    try {
+      if (now - fs.statSync(full).mtimeMs < ttlMs) continue;
+      fs.rmSync(full, { recursive: true, force: true });
+      gone++;
+    } catch (e) { /* исчезло само — и ладно */ }
+  }
+  return gone;
+}
+
+function purgeTrash() {
+  const ttl = TRASH_DAYS * 24 * 60 * 60 * 1000;
+  let gone = purgeOld(TANKS_TRASH, ttl);
+  for (const id of readDirNames(TANKS)) {
+    gone += purgeOld(path.join(TANKS, id, 'trash'), ttl);
+  }
+  if (gone) console.log(`корзина: удалено безвозвратно ${gone} шт. старше ${TRASH_DAYS} дней`);
+}
+
+function readDirNames(dir) {
+  try { return fs.readdirSync(dir); } catch (e) { return []; }
+}
+
 function trashFish(t, fid) {
   let n = 0;
   fs.mkdirSync(t.trash, { recursive: true });
@@ -739,7 +776,7 @@ function pageFor(url) {
 // уезжает и .git, и детские рисунки из data/, и купленный пак моделей —
 // папка с ним лежит в том же каталоге проекта.
 const STATIC_DIRS = ['/assets/', '/vendor/', '/demos/', '/tools/'];
-const STATIC_FILES = ['/print.html', '/favicon.ico'];
+const STATIC_FILES = ['/print.html', '/terms.html', '/favicon.ico'];
 // Из data наружу смотрят только две вещи: свои фоны и снимок сцены.
 // Текстуры рыбок отдаёт API, всё остальное — не для сети.
 const DATA_FILE_RE = /^\/data\/tanks\/([^/]+)\/(?:preview\.jpg|backgrounds\/[\w.-]+)$/;
@@ -786,4 +823,9 @@ http.createServer((req, res) => {
       }
     }
   }
+
+  // Корзину чистим при старте и раз в сутки: сервер домашний, его перезапускают
+  // редко, а обещание «через 30 дней» должно выполняться и без перезапуска.
+  purgeTrash();
+  setInterval(purgeTrash, 24 * 60 * 60 * 1000).unref();
 });
