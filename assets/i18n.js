@@ -41,6 +41,7 @@
       'home.bycode.placeholder': 'например, mk4dp7wq2f',
       'home.bycode.open': 'Открыть',
       // Четыре шага для того, кто пришёл впервые: увидел рилс — а дальше что?
+      'home.how.title': 'Как это работает',
       'home.how.s1': 'Распечатай раскраску',
       'home.how.s2': 'Раскрась фломастерами',
       'home.how.s3': 'Сфотографируй телефоном',
@@ -284,6 +285,7 @@
       'home.bycode.hint': 'The code is only needed on a new device — this one remembers your aquariums.',
       'home.bycode.placeholder': 'for example, mk4dp7wq2f',
       'home.bycode.open': 'Open',
+      'home.how.title': 'How it works',
       'home.how.s1': 'Print a colouring sheet',
       'home.how.s2': 'Colour it with markers',
       'home.how.s3': 'Photograph it with a phone',
@@ -517,6 +519,7 @@
       'home.bycode.hint': 'Kod przydaje się tylko na nowym urządzeniu — to zapamiętuje akwaria samo.',
       'home.bycode.placeholder': 'na przykład mk4dp7wq2f',
       'home.bycode.open': 'Otwórz',
+      'home.how.title': 'Jak to działa',
       'home.how.s1': 'Wydrukuj kolorowankę',
       'home.how.s2': 'Pokoloruj ją flamastrami',
       'home.how.s3': 'Sfotografuj telefonem',

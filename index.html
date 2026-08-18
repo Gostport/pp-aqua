@@ -46,8 +46,23 @@
   }
   header { flex: 1 1 340px; }
 
-  /* Четыре шага пути: пока своих аквариумов нет, они и есть главная. */
-  .how { margin: 0 0 36px; }
+  /* Инструкция-разворот: свёрнутая — тихая строка, раскрытая — четыре шага
+     и витрина. Новичку открыта сама, остальным не мешает. */
+  .how {
+    margin: 0 0 32px;
+    border: 1px solid var(--line); border-radius: 14px;
+  }
+  .how summary {
+    list-style: none; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; font-size: 14px; color: var(--muted);
+    transition: color .15s;
+  }
+  .how summary::-webkit-details-marker { display: none; }
+  .how summary:hover { color: var(--ink); }
+  .how .chev { font-size: 11px; transition: transform .15s; }
+  .how[open] .chev { transform: rotate(90deg); }
+  .how .howbody { padding: 4px 18px 18px; }
   .hsteps {
     list-style: none; counter-reset: step; margin: 0 0 14px; padding: 0;
     display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -196,26 +211,30 @@
     <div class="langrow"><span id="lang"></span></div>
   </div>
 
-  <!-- Четыре шага пути — для того, кто пришёл впервые. У кого уже есть свой
-       аквариум, тот дорогу знает, и блок ему не показывается. -->
-  <div class="how" id="how" hidden>
-    <ol class="hsteps">
-      <li><span class="ico">🖨️</span><span data-t="home.how.s1"></span></li>
-      <li><span class="ico">🖍️</span><span data-t="home.how.s2"></span></li>
-      <li><span class="ico">📷</span><span data-t="home.how.s3"></span></li>
-      <li><span class="ico">📺</span><span data-t="home.how.s4"></span></li>
-    </ol>
-    <p class="need" data-t="home.how.need"></p>
-    <!-- Витрина — карточка с живым кадром, а не таблетка: это главный путь
-         новичка к «вау», и бледной кнопкой он терялся даже рядом с пустым «+». -->
-    <a class="tank demo" id="demo" hidden>
-      <div class="shot"><div class="veil"></div></div>
-      <div class="body">
-        <h2 data-t="home.how.demo"></h2>
-        <div class="meta" data-t="home.how.demo.sub"></div>
-      </div>
-    </a>
-  </div>
+  <!-- Инструкция читается один раз, а места просит много, поэтому живёт
+       в развороте: новичку без аквариумов открыта сама, дальше — строка,
+       которую всегда можно раскрыть заново. -->
+  <details class="how" id="how">
+    <summary><span class="chev">▸</span><span data-t="home.how.title"></span></summary>
+    <div class="howbody">
+      <ol class="hsteps">
+        <li><span class="ico">🖨️</span><span data-t="home.how.s1"></span></li>
+        <li><span class="ico">🖍️</span><span data-t="home.how.s2"></span></li>
+        <li><span class="ico">📷</span><span data-t="home.how.s3"></span></li>
+        <li><span class="ico">📺</span><span data-t="home.how.s4"></span></li>
+      </ol>
+      <p class="need" data-t="home.how.need"></p>
+      <!-- Витрина — карточка с живым кадром, а не таблетка: это главный путь
+           новичка к «вау», и бледной кнопкой он терялся даже рядом с пустым «+». -->
+      <a class="tank demo" id="demo" hidden>
+        <div class="shot"><div class="veil"></div></div>
+        <div class="body">
+          <h2 data-t="home.how.demo"></h2>
+          <div class="meta" data-t="home.how.demo.sub"></div>
+        </div>
+      </a>
+    </div>
+  </details>
 
   <div class="empty" id="empty" data-t="home.empty" hidden></div>
   <div class="tanks" id="tanks"></div>
@@ -399,6 +418,7 @@
   // хоть что-то завёл. Ссылка с ?demo — чтобы витрина не прописалась
   // в списке своих.
   var demoAsked = false;
+  var howTouched = false;
   function askDemo() {
     if (demoAsked) return;
     demoAsked = true;
@@ -436,10 +456,14 @@
     box.textContent = '';
     empty.hidden = ids.length > 0;
 
-    // Шаги — только новичку: у кого есть свой аквариум, тот дорогу знает.
-    var how = document.getElementById('how');
-    how.hidden = ids.length > 0;
-    if (!how.hidden) askDemo();
+    // Инструкция раскрыта только новичку — у кого есть свой аквариум, тот
+    // дорогу знает. Ставим один раз: перерисовка (смена языка, удаление)
+    // не должна захлопывать разворот, открытый руками.
+    if (!howTouched) {
+      howTouched = true;
+      document.getElementById('how').open = ids.length === 0;
+    }
+    askDemo();
 
     // Каждый аквариум спрашиваем отдельно: их немного, а батч-ручка ради
     // десятка запросов не окупается.
