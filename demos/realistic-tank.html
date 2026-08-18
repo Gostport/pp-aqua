@@ -1974,8 +1974,10 @@
     var pr = document.getElementById('m-print');
     if (empty) cap.parentNode.insertBefore(pr, cap);
     else cap.parentNode.insertBefore(pr, document.getElementById('m-bg'));
+    // Пока рыбок нет, подсвечены оба шага — это один путь, а не выбор
+    // из двух. С первой рыбкой главной остаётся только съёмка.
     pr.classList.toggle('main', empty);
-    cap.classList.toggle('main', !empty);
+    cap.classList.add('main');
     rekey(pr.querySelector('b'), empty ? 'menu.print.step' : 'menu.print.title');
     rekey(cap.querySelector('b'), empty ? 'menu.capture.step' : 'menu.capture.title');
     // Готовая рыбка в шагах — не отвлечение, а утешение: подпись объясняет,
