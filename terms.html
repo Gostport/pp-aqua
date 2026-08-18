@@ -121,10 +121,14 @@
   кроме этого сервера, и чистятся вместе с данными сайта в браузере.</p>
 
   <div class="card">
-    <p><b>Журнала обращений сервер не ведёт</b> — IP-адреса посетителей никуда
-    не записываются. Единственное исключение: адрес держится в оперативной памяти
-    около часа, чтобы никто не наплодил сотню аквариумов за минуту. На диск он
-    не попадает и при перезапуске исчезает.</p>
+    <p><b>Сам аквариум журнала обращений не ведёт</b>: в его лог попадает только
+    «в такой-то аквариум добавлена рыбка», без адресов. Ещё адрес посетителя
+    держится в оперативной памяти около часа, чтобы никто не наплодил сотню
+    аквариумов за минуту — на диск он не попадает и при перезапуске исчезает.</p>
+    <p>Но перед аквариумом стоит обычный веб-прокси, и он, как принято, пишет
+    технический журнал обращений: время, IP-адрес, адрес страницы, код ответа.
+    Журнал крутится по кругу и затирается сам, нужен только чтобы разобраться,
+    если что-то отвалилось, в аналитику не идёт и никому не передаётся.</p>
   </div>
 
   <p>Ни счётчиков, ни аналитики, ни рекламных скриптов на страницах нет. Данные
@@ -220,10 +224,14 @@
   browser.</p>
 
   <div class="card">
-    <p><b>The server keeps no access log</b> — visitors' IP addresses are not written down
-    anywhere. The single exception: an address is held in memory for about an hour so that
-    nobody can create a hundred aquariums in a minute. It never reaches the disk and
-    disappears on restart.</p>
+    <p><b>The aquarium itself keeps no access log</b>: its own log only says “a fish was
+    added to such and such aquarium”, with no addresses. A visitor's address is also held
+    in memory for about an hour so that nobody can create a hundred aquariums in a minute —
+    it never reaches the disk and disappears on restart.</p>
+    <p>In front of the aquarium, however, sits an ordinary web proxy, and it does what such
+    proxies do: it writes a technical access log — time, IP address, page address, response
+    code. That log rotates and overwrites itself, it exists only to work out what broke when
+    something breaks, it does not feed any analytics and is not passed on to anyone.</p>
   </div>
 
   <p>There are no counters, no analytics and no advertising scripts on these pages. The data
@@ -315,9 +323,14 @@
   i znikają razem z danymi witryny w przeglądarce.</p>
 
   <div class="card">
-    <p><b>Serwer nie prowadzi dziennika połączeń</b> — adresy IP odwiedzających nie są nigdzie
-    zapisywane. Jedyny wyjątek: adres trzymany jest w pamięci operacyjnej przez około godzinę,
-    żeby nikt nie założył stu akwariów w minutę. Na dysk nie trafia i znika przy restarcie.</p>
+    <p><b>Samo akwarium nie prowadzi dziennika połączeń</b>: w jego logu jest tylko „do takiego
+    a takiego akwarium dodano rybkę”, bez adresów. Adres odwiedzającego trzymany jest jeszcze
+    w pamięci operacyjnej przez około godzinę, żeby nikt nie założył stu akwariów w minutę —
+    na dysk nie trafia i znika przy restarcie.</p>
+    <p>Przed akwarium stoi jednak zwykłe proxy webowe i ono, jak to bywa, zapisuje techniczny
+    dziennik połączeń: czas, adres IP, adres strony, kod odpowiedzi. Dziennik zapisuje się
+    w kółko i sam się nadpisuje, służy tylko do ustalenia, co się zepsuło, nie zasila żadnej
+    analityki i nikomu nie jest przekazywany.</p>
   </div>
 
   <p>Na stronach nie ma liczników, analityki ani skryptów reklamowych. Dane nie są nikomu
