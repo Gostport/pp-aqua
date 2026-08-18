@@ -83,7 +83,6 @@
     background: #fff; border-radius: 10px; padding: 8px;
   }
   .menu .qrbox svg { display: block; width: 104px; height: 104px; }
-  .menu .steps .qr { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
 
   /* «Открыть на другом экране»: QR крупнее, чем в шагах, — его наводят
      с расстояния вытянутой руки, а то и через всю комнату с дивана. */
@@ -214,20 +213,8 @@
         <span id="m-name">Аквариум</span><span class="pen">✏️</span>
       </button></h2>
       <p class="who"><span id="m-count">…</span> ·
-        <button class="code" id="m-code" type="button" data-t-title="menu.copy">
-          <span data-t="menu.code"></span> <b></b> <span class="pen">🔗</span>
-        </button>
         <button class="code" id="m-key" type="button" data-t-title="menu.pass.title"></button>
       </p>
-
-      <div class="steps" id="m-steps" hidden>
-        <b data-t="menu.steps.title"></b>
-        <span data-t="menu.steps.text"></span>
-        <div class="qr">
-          <span class="qrbox" id="steps-qr"></span>
-          <span data-t="menu.steps.qr"></span>
-        </div>
-      </div>
 
       <!-- Витрина (?demo): гость смотрит общий аквариум, и снимать сюда своих
            рыбок не должен — меню сведено к корму и «заведи свой». -->
@@ -1512,8 +1499,6 @@
   var menuUsed = false;      // открывали ли меню руками — тогда сами не лезем
   var fishCount = null;      // сколько рыбок в аквариуме, null — ещё не знаем
 
-  var codeBtn = document.getElementById('m-code');
-  codeBtn.querySelector('b').textContent = Tank.id;
   I18N.mount(document.getElementById('lang'));
 
   // Витрина: общий аквариум по ссылке «Посмотреть» с главной. Меню урезано,
@@ -1553,14 +1538,6 @@
     if (navigator.clipboard) navigator.clipboard.writeText(tankLink()).then(done, manual);
     else manual();
   }
-
-  codeBtn.onclick = function () {
-    copyLink(function () {
-      var was = codeBtn.innerHTML;
-      codeBtn.textContent = I18N.t('menu.copied');
-      setTimeout(function () { codeBtn.innerHTML = was; }, 2000);
-    });
-  };
 
   // QR рисует вендорная библиотека, сразу в SVG — он резкий на любом экране.
   // Белую подложку даёт .qrbox: без неё сканер кода на тёмном не видит.
@@ -2032,16 +2009,12 @@
     var first = fishCount === null;
     fishCount = n;
     document.getElementById('m-count').textContent = fishWord(n);
-    document.getElementById('m-steps').hidden = DEMO || n > 0;
     if (!DEMO) {
       orderSteps(!n);
       // Кормить и убирать некого: пока рыбок нет, эти пункты — шум вокруг
       // шагов. Появляются вместе с первой рыбкой.
       document.getElementById('m-feed').hidden = !n;
       document.getElementById('m-fish').hidden = !n;
-      // QR в шагах ведёт сразу на съёмку: с большого экрана лист не снимешь,
-      // а телефону так не нужны ни код, ни меню — только камера.
-      if (!n) drawQr(document.getElementById('steps-qr'), tankLink() + '/capture');
     }
     if (first && !n && !menuUsed && !TV) showMenu();
     else if (first && !hintSeen()) tapHint.hidden = false;
