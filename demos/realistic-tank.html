@@ -1957,47 +1957,12 @@
     return n ? I18N.plural(n, 'fish') : I18N.t('tank.nofish');
   }
 
-  // Пока аквариум пуст, меню — это шаги: печать первой и с номером, съёмка
-  // второй. С первой рыбкой пункты возвращаются на свои обычные места.
-  var stepMode = null;
-
-  // Ключ перевода меняем в самой разметке: смена языка переложит текст сама.
-  function rekey(el, key) {
-    el.setAttribute('data-t', key);
-    el.textContent = I18N.t(key);
-  }
-
-  function orderSteps(empty) {
-    if (empty === stepMode) return;
-    stepMode = empty;
-    var cap = document.getElementById('m-capture');
-    var pr = document.getElementById('m-print');
-    if (empty) cap.parentNode.insertBefore(pr, cap);
-    else cap.parentNode.insertBefore(pr, document.getElementById('m-bg'));
-    // Пока рыбок нет, подсвечены оба шага — это один путь, а не выбор
-    // из двух. С первой рыбкой главной остаётся только съёмка.
-    pr.classList.toggle('main', empty);
-    cap.classList.add('main');
-    rekey(pr.querySelector('b'), empty ? 'menu.print.step' : 'menu.print.title');
-    rekey(cap.querySelector('b'), empty ? 'menu.capture.step' : 'menu.capture.title');
-    // Готовая рыбка в шагах — не отвлечение, а утешение: подпись объясняет,
-    // почему она стоит между печатью и съёмкой.
-    rekey(document.querySelector('#m-pack i'), empty ? 'menu.pack.sub.step' : 'menu.pack.sub');
-  }
-
   // Пустой аквариум открывает меню сам — один раз и только если человек
   // до него не добрался раньше. Дальше меню только по клику.
   function setFishCount(n) {
     var first = fishCount === null;
     fishCount = n;
     document.getElementById('m-count').textContent = fishWord(n);
-    if (!DEMO) {
-      orderSteps(!n);
-      // Кормить и убирать некого: пока рыбок нет, эти пункты — шум вокруг
-      // шагов. Появляются вместе с первой рыбкой.
-      document.getElementById('m-feed').hidden = !n;
-      document.getElementById('m-fish').hidden = !n;
-    }
     if (first && !n && !menuUsed && !TV) showMenu();
     else if (first && !hintSeen()) tapHint.hidden = false;
   }
