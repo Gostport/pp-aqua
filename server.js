@@ -717,6 +717,16 @@ function handleApi(req, res, url) {
     return send(res, 200, JSON.stringify(listPack()));
   }
 
+  // Демо-аквариум для главной: код задаётся переменной AQUA_DEMO_TANK.
+  // Не задан или удалён — 404, и кнопка «Посмотреть» просто не появляется.
+  if (req.method === 'GET' && url === '/api/demo') {
+    const demo = String(process.env.AQUA_DEMO_TANK || '').trim();
+    if (demo && TANK_ID_RE.test(demo) && fs.existsSync(tank(demo).meta)) {
+      return send(res, 200, JSON.stringify({ id: demo }));
+    }
+    return send(res, 404, '{"error":"демо не настроено"}');
+  }
+
   if (req.method === 'POST' && url === '/api/tanks') {
     if (tanksCount() >= LIMITS.tanks) {
       return send(res, 507, '{"error":"на сервере больше нет места для новых аквариумов"}');

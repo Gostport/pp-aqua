@@ -73,6 +73,26 @@
   .menu .steps b { display: block; margin-bottom: 4px; }
   .menu .steps span { color: var(--muted); }
 
+  /* QR — мостик на телефон. Белая подложка обязательна: на тёмной карточке
+     без неё сканеру телефона не хватает контраста, и код просто не читается. */
+  .menu .qrbox {
+    flex: none; display: inline-block; line-height: 0;
+    background: #fff; border-radius: 10px; padding: 8px;
+  }
+  .menu .qrbox svg { display: block; width: 104px; height: 104px; }
+  .menu .steps .qr { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+
+  /* «Открыть на другом экране»: QR крупнее, чем в шагах, — его наводят
+     с расстояния вытянутой руки, а то и через всю комнату с дивана. */
+  .menu .share .qrwrap { display: grid; place-items: center; gap: 10px; margin: 14px 0 16px; }
+  .menu .share .qrwrap .qrbox svg { width: 168px; height: 168px; }
+  .menu .share .qrhint { margin: 0; font-size: 12px; color: var(--muted); text-align: center; }
+  .menu .share .tvline { margin: 12px 2px 2px; font-size: 12px; color: var(--muted); }
+  .menu .share .tvline b {
+    font: 12px/1 ui-monospace, Consolas, monospace;
+    letter-spacing: 1px; color: var(--accent);
+  }
+
   .menu .item {
     display: flex; align-items: center; gap: 12px;
     width: 100%; margin-bottom: 8px; padding: 11px 14px;
@@ -150,6 +170,9 @@
   }
   .menu .x:hover { color: var(--ink); background: rgba(88, 214, 255, 0.2); border-color: rgba(140, 200, 255, 0.45); }
 
+  /* Пока сцена не запущена, «Наполняю аквариум…» и не показываем. */
+  .loading[hidden] { display: none; }
+
   /* Подсказка живёт до первого открытия меню: дальше человек уже знает. */
   .taphint {
     position: fixed; z-index: 6; left: 50%; bottom: 20px; transform: translateX(-50%);
@@ -187,6 +210,10 @@
       <div class="steps" id="m-steps" hidden>
         <b data-t="menu.steps.title"></b>
         <span data-t="menu.steps.text"></span>
+        <div class="qr">
+          <span class="qrbox" id="steps-qr"></span>
+          <span data-t="menu.steps.qr"></span>
+        </div>
       </div>
 
       <button class="item main" id="m-capture" type="button">
@@ -212,6 +239,10 @@
       <button class="item" id="m-fish" type="button">
         <span class="ico">🗑️</span>
         <span><b data-t="menu.fish.title"></b><i data-t="menu.fish.sub"></i></span>
+      </button>
+      <button class="item" id="m-share" type="button">
+        <span class="ico">📺</span>
+        <span><b data-t="menu.share.title"></b><i data-t="menu.share.sub"></i></span>
       </button>
       <a class="item" href="/">
         <span class="ico">🏠</span>
@@ -250,10 +281,45 @@
       <p class="who" data-t="menu.picker.sub"></p>
       <div class="packgrid" id="packgrid"></div>
     </div>
+
+    <div id="menu-share" class="share" hidden>
+      <button class="goback" id="m-shareback" type="button" data-t="menu.back"></button>
+      <h2 data-t="menu.share.title"></h2>
+      <div class="qrwrap">
+        <span class="qrbox" id="share-qr"></span>
+        <p class="qrhint" data-t="menu.share.hint"></p>
+      </div>
+      <button class="item" id="m-copylink" type="button">
+        <span class="ico">🔗</span>
+        <span><b data-t="menu.share.copy"></b><i data-t="menu.share.copy.sub"></i></span>
+      </button>
+      <button class="item" id="m-sendlink" type="button" hidden>
+        <span class="ico">📨</span>
+        <span><b data-t="menu.share.send"></b><i data-t="menu.share.send.sub"></i></span>
+      </button>
+      <p class="tvline"><span data-t="menu.share.tv"></span> <b id="share-code"></b></p>
+    </div>
   </div>
 </div>
 
 <div class="taphint" id="taphint" data-t="menu.hint" hidden></div>
+
+<!-- Телефон — почти всегда камера, а не витрина: тяжёлую сцену не грузим,
+     пока человек не сказал, что пришёл именно смотреть. -->
+<div class="menu phonepick" id="phonepick" hidden>
+  <div class="card">
+    <h2 data-t="tank.phone.title"></h2>
+    <p class="who" id="pp-name"></p>
+    <button class="item main" id="pp-shoot" type="button">
+      <span class="ico">📷</span>
+      <span><b data-t="menu.capture.title"></b><i data-t="menu.capture.sub"></i></span>
+    </button>
+    <button class="item" id="pp-watch" type="button">
+      <span class="ico">👀</span>
+      <span><b data-t="tank.phone.watch"></b><i data-t="tank.phone.watch.sub"></i></span>
+    </button>
+  </div>
+</div>
 
 <!-- Пути абсолютные: страница отдаётся и по /t/<id>, и по своему файловому
      адресу, относительные ссылки сломались бы на первом же. -->
@@ -263,6 +329,7 @@
 <script src="/vendor/DRACOLoader.js"></script>
 <script src="/vendor/SkeletonUtils.js"></script>
 <script src="/assets/i18n.js"></script>
+<script src="/vendor/qr.js"></script>
 <script src="/assets/fish-frame.js"></script>
 <script src="/assets/fish-thumbs.js"></script>
 <script src="/assets/modal.js"></script>
@@ -1420,13 +1487,9 @@
 
   // Ссылку отдаём целиком: по коду аквариум открывают на другом устройстве,
   // но набирать адрес руками никому не хочется.
-  codeBtn.onclick = function () {
-    var link = location.origin + Tank.url;
-    var done = function () {
-      var was = codeBtn.innerHTML;
-      codeBtn.textContent = I18N.t('menu.copied');
-      setTimeout(function () { codeBtn.innerHTML = was; }, 2000);
-    };
+  function tankLink() { return location.origin + Tank.url; }
+
+  function copyLink(done) {
     // Буфера может не быть вовсе: с телефона аквариум открывают по http,
     // а там браузер эту возможность не даёт. Тогда показываем ссылку
     // выделенной — скопировать вручную всё равно можно.
@@ -1434,12 +1497,36 @@
       Modal.prompt({
         title: I18N.t('menu.link.title'),
         text: I18N.t('menu.link.text'),
-        value: link, mono: true, confirmLabel: I18N.t('menu.link.ok')
+        value: tankLink(), mono: true, confirmLabel: I18N.t('menu.link.ok')
       });
     };
-    if (navigator.clipboard) navigator.clipboard.writeText(link).then(done, manual);
+    if (navigator.clipboard) navigator.clipboard.writeText(tankLink()).then(done, manual);
     else manual();
+  }
+
+  codeBtn.onclick = function () {
+    copyLink(function () {
+      var was = codeBtn.innerHTML;
+      codeBtn.textContent = I18N.t('menu.copied');
+      setTimeout(function () { codeBtn.innerHTML = was; }, 2000);
+    });
   };
+
+  // QR рисует вендорная библиотека, сразу в SVG — он резкий на любом экране.
+  // Белую подложку даёт .qrbox: без неё сканер кода на тёмном не видит.
+  function drawQr(host, text) {
+    if (host.firstChild) return;   // уже нарисован, содержимое не меняется
+    try {
+      var qr = qrcode(0, 'M');
+      qr.addData(text);
+      qr.make();
+      host.innerHTML = qr.createSvgTag(4, 0);
+    } catch (e) {
+      // Без QR пункт живёт: остаются ссылка и код. Прячем вместе с подписью —
+      // «наведи камеру на этот код» без кода читается как издевательство.
+      host.parentNode.style.display = 'none';
+    }
+  }
 
   function hintSeen() {
     try { return localStorage.getItem(HINT_KEY) === '1'; } catch (e) { return false; }
@@ -1473,7 +1560,9 @@
 
   // Клик по сцене — переключатель. Внутри карточки у каждой кнопки своё дело,
   // а по затемнению вокруг неё меню закрывается.
+  var phonePick = document.getElementById('phonepick');
   document.addEventListener('click', function (e) {
+    if (!phonePick.hidden) return;   // выбор «снимать или смотреть» — не фон
     if (menuCard.contains(e.target) || inModal(e.target)) return;
     toggleMenu();
   });
@@ -1502,12 +1591,13 @@
   var fishListFrame = document.getElementById('fishframe');
   var menuPrint = document.getElementById('menu-print');
   var printFrame = document.getElementById('printframe');
+  var menuShare = document.getElementById('menu-share');
   var packGrid = document.getElementById('packgrid');
   var packListed = false;
 
   // Виды карточки: главный список и то, что открывается из него. Прячем все
   // разом и показываем один — иначе с каждым новым видом забывается строка.
-  var views = [menuMain, menuPack, menuCapture, menuBg, menuFish, menuPrint];
+  var views = [menuMain, menuPack, menuCapture, menuBg, menuFish, menuPrint, menuShare];
 
   function showView(view, wide) {
     views.forEach(function (v) { v.hidden = v !== view; });
@@ -1556,6 +1646,34 @@
   function showPackView() {
     showView(menuPack, true);
     listPack();
+  }
+
+  // ── «Открыть на другом экране» ──
+  // Весь перенос между устройствами собран в одном пункте: QR — телефону
+  // с камерой, ссылка — мессенджеру, код — телевизору, где камеры нет.
+  function showShareView() {
+    showView(menuShare, false);
+    drawQr(document.getElementById('share-qr'), tankLink());
+    document.getElementById('share-code').textContent = Tank.id;
+  }
+
+  var copyItem = document.getElementById('m-copylink');
+  copyItem.onclick = function () {
+    copyLink(function () {
+      var b = copyItem.querySelector('b');
+      b.textContent = I18N.t('menu.copied');
+      setTimeout(function () { b.textContent = I18N.t('menu.share.copy'); }, 2000);
+    });
+  };
+
+  // Системное «поделиться» есть не везде; где нет — кнопки просто нет.
+  var sendItem = document.getElementById('m-sendlink');
+  if (navigator.share) {
+    sendItem.hidden = false;
+    sendItem.onclick = function () {
+      navigator.share({ title: tankName, url: tankLink() })
+        .catch(function () { /* передумали — не ошибка */ });
+    };
   }
 
   function addPackFish(name, btn) {
@@ -1639,6 +1757,7 @@
   function applyName(name) {
     tankName = name;
     document.getElementById('m-name').textContent = name;
+    document.getElementById('pp-name').textContent = name;
     document.title = name;
   }
 
@@ -1774,6 +1893,8 @@
   document.getElementById('m-fishback').onclick = showMainView;
   document.getElementById('m-print').onclick = showPrintView;
   document.getElementById('m-printback').onclick = showMainView;
+  document.getElementById('m-share').onclick = showShareView;
+  document.getElementById('m-shareback').onclick = showMainView;
 
   // Врезка сообщает, что рыбку выпустили, — показываем её сразу.
   addEventListener('message', function (e) {
@@ -1806,6 +1927,30 @@
     return n ? I18N.plural(n, 'fish') : I18N.t('tank.nofish');
   }
 
+  // Пока аквариум пуст, меню — это шаги: печать первой и с номером, съёмка
+  // второй. С первой рыбкой пункты возвращаются на свои обычные места.
+  var stepMode = null;
+
+  // Ключ перевода меняем в самой разметке: смена языка переложит текст сама.
+  function retitle(item, key) {
+    var b = item.querySelector('b');
+    b.setAttribute('data-t', key);
+    b.textContent = I18N.t(key);
+  }
+
+  function orderSteps(empty) {
+    if (empty === stepMode) return;
+    stepMode = empty;
+    var cap = document.getElementById('m-capture');
+    var pr = document.getElementById('m-print');
+    if (empty) cap.parentNode.insertBefore(pr, cap);
+    else cap.parentNode.insertBefore(pr, document.getElementById('m-bg'));
+    pr.classList.toggle('main', empty);
+    cap.classList.toggle('main', !empty);
+    retitle(pr, empty ? 'menu.print.step' : 'menu.print.title');
+    retitle(cap, empty ? 'menu.capture.step' : 'menu.capture.title');
+  }
+
   // Пустой аквариум открывает меню сам — один раз и только если человек
   // до него не добрался раньше. Дальше меню только по клику.
   function setFishCount(n) {
@@ -1813,13 +1958,45 @@
     fishCount = n;
     document.getElementById('m-count').textContent = fishWord(n);
     document.getElementById('m-steps').hidden = n > 0;
+    orderSteps(!n);
+    // QR в шагах ведёт сразу на съёмку: с большого экрана лист не снимешь,
+    // а телефону так не нужны ни код, ни меню — только камера.
+    if (!n) drawQr(document.getElementById('steps-qr'), tankLink() + '/capture');
     if (first && !n && !menuUsed) showMenu();
     else if (first && !hintSeen()) tapHint.hidden = false;
   }
 
   function fail(html) {
     var l = document.getElementById('loading');
-    if (l) l.innerHTML = html;
+    if (l) { l.hidden = false; l.innerHTML = html; }
+  }
+
+  function startScene() {
+    try {
+      init();
+    } catch (err) {
+      fail(I18N.t('tank.crash', { msg: String(err && err.message || err) }));
+    }
+  }
+
+  // Телефон — узкий экран с тачем — спрашиваем, зачем пришли, до загрузки
+  // сцены: она тянет все модели и на слабых телефонах живёт тяжело, а нужен
+  // там почти всегда не аквариум, а съёмка. Планшеты шире 700 px и попадают
+  // в «большие экраны» — на них сцена запускается сразу.
+  function startOrAsk() {
+    var phone = matchMedia('(pointer: coarse)').matches
+             && matchMedia('(max-width: 700px)').matches;
+    if (!phone) return startScene();
+    document.getElementById('loading').hidden = true;
+    phonePick.hidden = false;
+    document.getElementById('pp-shoot').onclick = function () {
+      location.href = Tank.url + '/capture';
+    };
+    document.getElementById('pp-watch').onclick = function () {
+      phonePick.hidden = true;
+      document.getElementById('loading').hidden = false;
+      startScene();
+    };
   }
 
   // Сначала убеждаемся, что аквариум вообще есть. Иначе сцена соберётся,
@@ -1841,11 +2018,7 @@
       if (meta.locked && !Tank.pass()) {
         document.querySelector('#m-fish i').textContent = I18N.t('menu.fish.sub.pass');
       }
-      try {
-        init();
-      } catch (err) {
-        fail(I18N.t('tank.crash', { msg: String(err && err.message || err) }));
-      }
+      startOrAsk();
     });
   }).catch(function () {
     fail(I18N.t('tank.noserver'));

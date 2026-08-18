@@ -127,6 +127,7 @@ a volume.
   | `AQUA_MAX_FISH` | 40 | fish in a single aquarium |
   | `AQUA_MAX_BG` | 8 | custom backgrounds in a single aquarium |
   | `AQUA_MAX_DATA_MB` | 2048 | the size of the whole `data/` folder |
+  | `AQUA_DEMO_TANK` | — | code of a showcase aquarium: the home page offers newcomers a “Peek at a live aquarium” button |
 
   Plus hard limits per picture: 3 MB for a fish, 6 MB for a background, 12 MB
   for the request body.
