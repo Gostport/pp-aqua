@@ -1,7 +1,7 @@
 {
   "name": "paper-aquarium",
   "version": "1.0.0",
-  "description": "Аквариум с раскрасками: ребёнок раскрашивает лист, фотографирует — и рыбка плывёт в 3D-сцене",
+  "description": "Paper Aquarium: a child colours a printed sheet, photographs it — and the fish swims in a 3D scene",
   "license": "MIT",
   "private": true,
   "type": "commonjs",

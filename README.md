@@ -1,183 +1,194 @@
-# Аквариум с раскрасками
+**English** · [Русский](README.ru.md)
 
-Домашняя игра для ребёнка по мотивам teamLab «Sketch Aquarium»: распечатал
-лист, раскрасил фломастерами, сфотографировал телефоном — и рыбка поплыла
-в аквариуме на большом экране.
+# Paper Aquarium
+
+A home game for a child, in the spirit of teamLab's *Sketch Aquarium*: print
+a sheet, colour it with markers, take a photo with a phone — and the fish
+starts swimming in an aquarium on the big screen.
 
 ```
-раскраска A4  →  фото с телефона  →  текстура  →  3D-рыбка в сцене
+A4 colouring sheet  →  phone photo  →  texture  →  3D fish in the scene
 ```
 
-Сервер на голом Node без единой зависимости, сцена на three.js, всё
-хозяйство — папка `data/`.
+The server is plain Node with zero dependencies, the scene is three.js, and
+everything the game owns lives in `data/`.
 
-Вопросы, идеи и «у меня не заводится» — в чат проекта:
+Questions, ideas and "it won't start for me" — the project chat:
 [t.me/+5PkSBR1C6LtmOTM0](https://t.me/+5PkSBR1C6LtmOTM0).
 
-![Аквариум с рыбками, раскрашенными ребёнком](docs/screenshots/aquarium.jpg)
+![An aquarium with fish coloured by a child](docs/screenshots/aquarium.jpg)
 
 | | |
 |---|---|
-| ![Меню аквариума](docs/screenshots/menu.jpg) | ![Экран съёмки](docs/screenshots/capture.jpg) |
-| Клик в любом месте — меню со всеми дорогами | Съёмка листа открывается там же, врезкой |
-| ![Листы раскрасок](docs/screenshots/print.jpg) | ![Рыбки из набора](docs/screenshots/pack.jpg) |
-| Двенадцать листов A4 с метками по углам | Готовые рыбы, если раскрашивать некогда |
+| ![The aquarium menu](docs/screenshots/menu.jpg) | ![The capture screen](docs/screenshots/capture.jpg) |
+| Tap anywhere — a menu with every road out | The sheet is photographed right there, in a frame |
+| ![Colouring sheets](docs/screenshots/print.jpg) | ![Fish from the pack](docs/screenshots/pack.jpg) |
+| Twelve A4 sheets with markers in the corners | Ready-made fish, when there is no time to colour |
 
-Ещё: [список рыбок с рисунками](docs/screenshots/fish-list.jpg),
-[выбор фона](docs/screenshots/backgrounds.jpg),
-[список аквариумов](docs/screenshots/home.jpg).
+More: [the list of fish with their drawings](docs/screenshots/fish-list.jpg),
+[choosing a background](docs/screenshots/backgrounds.jpg),
+[the list of aquariums](docs/screenshots/home.jpg).
 
-## Как это работает
+## How it works
 
-**Лист раскраски.** По углам четыре чёрные метки 6×6 клеток: 16 внутренних
-клеток кодируют вид рыбы и номер угла. По ним съёмка находит лист на фото
-и выправляет перспективу — метки закрашивать нельзя, всё остальное можно.
-Контур рыбы напечатан тонкой серой линией, зоны плавников — бледным
-пунктиром, чтобы их было видно, но чтобы ребёнок не принял подсказку за
-часть рисунка.
+**The colouring sheet.** Four black 6×6 markers in the corners: their 16 inner
+cells encode the species and the corner number. The capture step uses them to
+find the sheet in a photo and undo the perspective — the markers must stay
+uncoloured, everything else is fair game. The fish outline is printed as a thin
+grey line and the fin areas as a pale dashed one, so they are visible without
+the child taking the hint for part of the drawing.
 
-**Съёмка.** `assets/capture.js` ищет метки перебором порогов яркости,
-выправляет перспективу, вырезает раскраску по контуру вида из манифеста
-и срезает полосу вдоль самой печатной линии — иначе она осталась бы тёмной
-каймой на рыбке. Получается текстура, которая натягивается на 3D-модель
-по планарной развёртке бокового силуэта.
+**Capture.** `assets/capture.js` looks for the markers by sweeping brightness
+thresholds, undoes the perspective, cuts the drawing along the species contour
+from the manifest and trims a strip along the printed line itself — otherwise
+it would stay as a dark rim on the fish. The result is a texture, mapped onto
+the 3D model through a planar unwrap of its side silhouette.
 
-**Аквариум.** `demos/realistic-tank.html`: рыбы плавают в объёме, который
-повторяет пирамиду обзора камеры, а не коробку — иначе у дальней стенки
-они жались бы к центру экрана. Ориентацию модели (где нос, где спина)
-сцена определяет сама по взмахам хвоста в анимации: `assets/fish-frame.js`.
+**The aquarium.** `demos/realistic-tank.html`: the fish swim inside a volume
+that follows the camera frustum rather than a box — against a box, fish near
+the far wall would huddle towards the centre of the screen. The scene works out
+the model's orientation (where the nose is, where the back is) on its own, from
+the tail beats in the animation: `assets/fish-frame.js`.
 
-**Меню.** Клик в любом месте аквариума открывает меню: съёмка, готовые
-рыбки из набора, корм, раскраски, фон, удаление рыбок. Съёмка, фон
-и раскраски открываются там же врезкой — это те же страницы (`?embed=1`),
-а не их копии.
+**The menu.** A tap anywhere in the aquarium opens the menu: capture, ready-made
+fish from the pack, food, colouring sheets, background, removing fish. Capture,
+background and sheets open right there in a frame — they are the same pages
+(`?embed=1`), not copies of them.
 
-**Языки.** Русский, английский и польский; при первом заходе берётся язык
-устройства, дальше — тот, что выбрали переключателем. Все строки лежат
-в `assets/i18n.js`, разметка размечена атрибутами `data-t`. Листы раскрасок
-тоже трёхъязычные: подпись под рыбой печатается на языке страницы, а метки
-в углах во всех версиях одинаковые — распознаётся любой лист.
+**Languages.** Russian, English and Polish; on the first visit the device
+language is used, after that whatever the switcher was set to. All strings live
+in `assets/i18n.js` and the markup is annotated with `data-t` attributes. The
+colouring sheets are trilingual too: the caption under the fish is printed in
+the language of the page, while the corner markers are identical in every
+version — any printed sheet is recognised.
 
-## Запуск
+## Running it
 
 ```bash
 node server.js          # http://localhost:8000
 ```
 
-Нужен Node 18+. Ставить нечего: зависимостей нет, three.js лежит в `vendor/`.
-Порт меняется переменной `PORT`.
+Node 18+ is required. There is nothing to install: no dependencies, and
+three.js sits in `vendor/`. The port is set by `PORT`.
 
-Сервер печатает адреса всех сетевых интерфейсов — по ним аквариум
-открывается с телефона и телевизора в той же Wi-Fi.
+The server prints the addresses of every network interface — use them to open
+the aquarium from a phone or a TV on the same Wi-Fi.
 
-## Доступ
+## Access
 
-Аккаунтов нет. У каждого аквариума есть код из 10 знаков (он же адрес) и
-пароль:
+There are no accounts. Every aquarium has a 10-character code (which is also
+its address) and a password:
 
-| | код (ссылка) | пароль |
+| | code (the link) | password |
 |---|---|---|
-| смотреть аквариум | ✅ | |
-| добавить рыбку, покормить, сменить фон | ✅ | |
-| удалить рыбок или аквариум, переименовать | | ✅ |
+| watch the aquarium | ✅ | |
+| add a fish, feed them, change the background | ✅ | |
+| delete fish or the aquarium, rename it | | ✅ |
 
-Съёмка и кормление нарочно без пароля: ребёнок открывает ссылку с телефона,
-и требовать там пароль — значит убить всю затею. Испортить этим нечего,
-необратимое закрыто.
+Capture and feeding are deliberately password-free: the child opens the link on
+a phone, and asking for a password there would kill the whole idea. Nothing can
+be spoiled that way — everything irreversible is behind the password.
 
-Код длинный не случайно: 31¹⁰ ≈ 8·10¹⁴ вариантов, перебором чужие рисунки
-не найти. Пятизначный код (100 000 вариантов) перебирался бы за минуты.
-От перебора пароля защищает пауза после пяти промахов, растущая до
-десяти минут.
+The code is long on purpose: 31¹⁰ ≈ 8·10¹⁴ combinations, so somebody else's
+drawings cannot be found by guessing. A five-digit code (100,000 combinations)
+would be brute-forced in minutes. The password is protected by a pause after
+five misses, growing to ten minutes.
 
-## Деплой
+## Deployment
 
-Всё для сервера лежит рядом: `Dockerfile`, `docker-compose.prod.yml`
-и `.env.example`. Аквариум — один контейнер без своего прокси: HTTPS,
-домен и сертификат берёт на себя Traefik через внешнюю сеть `web`.
-Порядок, бэкапы и разбор частых поломок — в [DEPLOY.md](DEPLOY.md).
+Everything a server needs sits next to the code: `Dockerfile`,
+`docker-compose.prod.yml` and `.env.example`. The aquarium is a single
+container with no proxy of its own: HTTPS, the domain and the certificate are
+handled by Traefik through the external `web` network. The order of steps,
+backups and the usual breakages are in [DEPLOY.md](DEPLOY.md) (in Russian).
 
 ```bash
 cp .env.example .env      # DOMAIN
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 ```
 
-Пак моделей в образ не попадает — он монтируется томом с сервера.
+The model pack never enters the image — it is mounted from the server as
+a volume.
 
-## Что нужно знать перед тем, как выставлять наружу
+## What to know before putting it on the open internet
 
-- **Пароль ходит открытым текстом** в заголовке `X-Tank-Pass`. Внутри
-  домашней сети это приемлемо, в интернете обязателен HTTPS — его берёт
-  на себя прокси. На сервере от пароля хранится только scrypt-хеш с солью.
-- **Добавление рыбок и загрузка фонов без пароля** — осознанное решение:
-  ребёнок открывает съёмку по ссылке с телефона. Чтобы этим нельзя было
-  забить диск, есть пределы (все меняются переменными окружения):
+- **The password travels in plain text** in the `X-Tank-Pass` header. Inside
+  a home network that is acceptable; on the internet HTTPS is mandatory, and
+  the proxy provides it. On the server only a salted scrypt hash of the
+  password is stored.
+- **Adding fish and uploading backgrounds without a password** is a deliberate
+  decision: the child opens capture from a link on a phone. So that nobody can
+  fill the disk with it, there are limits (all of them environment variables):
 
-  | Переменная | По умолчанию | Что ограничивает |
+  | Variable | Default | What it limits |
   |---|---|---|
-  | `AQUA_MAX_TANKS` | 200 | всего аквариумов на сервере |
-  | `AQUA_TANKS_PER_HOUR` | 5 | новых аквариумов с одного адреса в час |
-  | `AQUA_MAX_FISH` | 40 | рыбок в одном аквариуме |
-  | `AQUA_MAX_BG` | 8 | своих фонов в одном аквариуме |
-  | `AQUA_MAX_DATA_MB` | 2048 | размер всей папки `data/` |
+  | `AQUA_MAX_TANKS` | 200 | aquariums on the server in total |
+  | `AQUA_TANKS_PER_HOUR` | 5 | new aquariums from one address per hour |
+  | `AQUA_MAX_FISH` | 40 | fish in a single aquarium |
+  | `AQUA_MAX_BG` | 8 | custom backgrounds in a single aquarium |
+  | `AQUA_MAX_DATA_MB` | 2048 | the size of the whole `data/` folder |
 
-  Плюс жёсткие пределы на картинку: 3 МБ рыбка, 6 МБ фон, 12 МБ тело запроса.
-- Сервер раздаёт только перечисленное в `staticFor()`: страницы, `assets/`,
-  `vendor/`, `demos/`, `tools/` и из `data/` — лишь снимки сцен и свои фоны.
-  Всё остальное, включая `.git` и сам `server.js`, отдаёт 404.
+  Plus hard limits per picture: 3 MB for a fish, 6 MB for a background, 12 MB
+  for the request body.
+- The server only serves what `staticFor()` lists: the pages, `assets/`,
+  `vendor/`, `demos/`, `tools/`, and from `data/` — nothing but scene snapshots
+  and uploaded backgrounds. Everything else, including `.git` and `server.js`
+  itself, gets a 404.
 
-## Модели рыб: что купить и куда положить
+## The fish models: what to buy and where to put it
 
-Рыб в репозитории нет и быть не может: в игре стоит купленный пак, его
-лицензия разрешает использование, но запрещает перезаливку файлов. Без
-моделей всё запустится, но аквариум будет пустой. Чтобы поплыли, нужно
-четыре шага — минут пятнадцать вместе со скачиванием.
+The fish are not in this repository and cannot be: the game uses a purchased
+pack whose licence allows use but forbids redistributing the files. Without the
+models everything still starts, but the aquarium stays empty. Four steps get
+them swimming — about fifteen minutes including the download.
 
-**1. Купить пак**
+**1. Buy the pack**
 
-[Coral Reef Fish Collection animated — Game Ready pack 8](https://www.cgtrader.com/3d-model-collections/coral-reef-fish-collection-animated-game-ready-pack-8),
-автор JosKata, CGTrader. Тридцать рифовых рыб со скелетной анимацией,
-лицензия Royalty Free.
+[Coral Reef Fish Collection animated — Game Ready pack 8](https://www.cgtrader.com/3d-model-collections/coral-reef-fish-collection-animated-game-ready-pack-8)
+by JosKata, on CGTrader. Thirty reef fish with skeletal animation, Royalty Free
+licence.
 
-Строго этот пак не обязателен — подойдут любые рыбы, см. «Другие модели»
-ниже. Но листы раскрасок в репозитории обведены именно с него, и без
-пересборки листов виды не совпадут.
+This exact pack is not strictly required — any fish will do, see "Other models"
+below. But the colouring sheets in this repository were traced from it, and
+without rebuilding the sheets the species will not match.
 
-**2. Разложить файлы**
+**2. Lay out the files**
 
-Из скачанного нужна **только папка `fbx`** — тридцать файлов `.fbx`.
-Текстуры уже вшиты внутрь них, отдельные `.rar` из `textures/`
-распаковывать не нужно (они пригодятся, только если захочешь пересобрать
-пак в исходном разрешении).
+From the download you only need the **`fbx` folder** — thirty `.fbx` files. The
+textures are already embedded in them; the separate `.rar` archives in
+`textures/` do not need unpacking (they are only useful if you want to rebuild
+the pack at the original resolution).
 
 ```
 paper-aquarium/
-└── купил 3д рыбок/
+└── купил 3д рыбок/          ← "the 3D fish I bought"
     └── fbx/
         ├── Auriga Butterflyfish.fbx
         ├── Bicolor Angelfish.fbx
-        └── … всего 30 штук
+        └── … 30 files in total
 ```
 
-Папка `купил 3д рыбок/` в `.gitignore` — покупка остаётся у тебя.
-Имя можно поменять, тогда путь передаётся скрипту: `-Pack "своя\папка"`.
+The folder `купил 3д рыбок/` is in `.gitignore` — your purchase stays yours.
+The name can be changed, in which case the path is passed to the script:
+`-Pack "your\folder"`.
 
-**3. Собрать в glTF**
+**3. Convert to glTF**
 
-Нужен конвертер FBX2glTF (Windows, PowerShell):
+You will need the FBX2glTF converter (Windows, PowerShell):
 
 ```powershell
 npm install --no-save fbx2gltf
 
-# путь внутри пакета зависит от версии — пусть PowerShell найдёт сам
+# the path inside the package depends on the version — let PowerShell find it
 $env:FBX2GLTF = (Get-ChildItem node_modules -Recurse -Filter FBX2glTF.exe)[0].FullName
 
 powershell -ExecutionPolicy Bypass -File tools\convert-pack.ps1
 ```
 
-Скрипт распакует каждую рыбу, ужмёт текстуры до 1024 px в JPEG (в исходнике
-это PNG 2048×2048 по 3–4 МБ — 110 МБ на пак вместо 12), починит альфу,
-из-за которой часть рыб приезжает невидимыми, и сложит результат:
+The script unpacks every fish, squeezes the textures down to 1024 px JPEG (the
+originals are 2048×2048 PNGs of 3–4 MB each — 110 MB per pack instead of 12),
+fixes the alpha channel that makes some fish arrive invisible, and lays out the
+result:
 
 ```
 assets/models/pack/
@@ -186,81 +197,84 @@ assets/models/pack/
 │   ├── buffer.bin
 │   └── clownfish_basecolor_COLOR.jpg
 ├── bluetang/
-└── … 28 папок + pack.json
+└── … 28 folders + pack.json
 ```
 
-Двадцать восемь, а не тридцать: у двух рыб в паке нет вшитых текстур или
-пустая геометрия, скрипт их отсеивает и пишет об этом в консоль.
+Twenty-eight, not thirty: two fish in the pack have no embedded textures or
+empty geometry, so the script drops them and says so in the console.
 
-**4. Проверить**
+**4. Check**
 
 ```bash
 node server.js
 ```
 
-Открыть `http://localhost:8000`, завести аквариум, нажать в него и выбрать
-«🐠 Запустить готовую рыбку» — должно показать 12 карточек с миниатюрами.
-Двенадцать, а не двадцать восемь: в набор попадают только виды, у которых
-есть лист раскраски, — что можно раскрасить, то и плавает. Полный список
-собранных моделей отдаёт `http://localhost:8000/api/pack` (там 28, у видов
-с листом стоит `sheet: true`). Пусто — значит пак не собрался, ищи в выводе
-скрипта строки «пропуск».
+Open `http://localhost:8000`, create an aquarium, tap it and choose
+"🐠 Release a ready-made fish" — you should see 12 cards with thumbnails.
+Twelve, not twenty-eight: only species that have a colouring sheet make it into
+the picker — what can be coloured is what swims. The full list of converted
+models is served by `http://localhost:8000/api/pack` (28 there, with
+`sheet: true` on the species that have a sheet). Empty means the pack was not
+built — look for "пропуск" ("skipped") lines in the script's output.
 
-### Другие модели
+### Other models
 
-Скрипт заточен под этот пак и под Windows (ужимает текстуры средствами
-System.Drawing). Любые свои `.glb`/`.gltf` кладутся в `assets/models/pack/`
-руками — по папке на вид, и `pack.json` со списком рядом.
+The script is tailored to this pack and to Windows (it resizes textures with
+System.Drawing). Any `.glb`/`.gltf` files of your own go into
+`assets/models/pack/` by hand — one folder per species, with a `pack.json`
+listing them next to it.
 
-Виды в игре задаёт `assets/coloring/manifest.json`, а он собирается из
-силуэтов моделей. Поэтому под другой набор рыб листы надо пересобрать:
-`/tools/silhouettes.html` → `node tools/make-coloring.js`. Требования
-к моделям, порядок добавления вида и грабли конвертации — в
-[assets/models/README.md](assets/models/README.md).
+The species in the game are defined by `assets/coloring/manifest.json`, which is
+built from the silhouettes of the models. So a different set of fish means the
+sheets have to be rebuilt: `/tools/silhouettes.html` → `node
+tools/make-coloring.js`. Model requirements, how to add a species and the
+conversion pitfalls are in
+[assets/models/README.md](assets/models/README.md) (in Russian).
 
-## Инструменты
+## Tools
 
-| Что | Где | Зачем |
+| What | Where | Why |
 |---|---|---|
-| Силуэты | `/tools/silhouettes.html` | обводит модели пака, отдаёт `contours.json` и плавники поверх тела |
-| Листы | `node tools/make-coloring.js` | собирает 12 листов A4 на трёх языках и манифест |
-| Проверка съёмки | `/tools/test-capture.html` | прогоняет каждый лист с перекосом, поворотом и шумом |
-| Сборка пака | `tools/convert-pack.ps1` | FBX из купленного архива → glTF |
+| Silhouettes | `/tools/silhouettes.html` | traces the pack models, produces `contours.json` and the fins drawn over the body |
+| Sheets | `node tools/make-coloring.js` | builds 12 A4 sheets in three languages plus the manifest |
+| Capture test | `/tools/test-capture.html` | runs every sheet through skew, rotation and noise |
+| Pack build | `tools/convert-pack.ps1` | FBX from the purchased archive → glTF |
 
-После правки листов проверка съёмки должна показывать «провалов нет»:
-метки подбираются так, чтобы между кодами любых двух видов было не меньше
-четырёх различающихся клеток.
+After the sheets change, the capture test must report no failures: the markers
+are chosen so that the codes of any two species differ in at least four cells.
 
-## Данные
+## Data
 
-Всё живёт в `data/tanks/<код>/`: `meta.json` (имя, соль и хеш пароля),
-`settings.json` (фон), `fish/` (рисунки и описания), `backgrounds/`
-(свои фоны), `preview.jpg` (снимок для карточки). Удалённое переезжает
-в `trash/` и `data/trash-tanks/`, а не стирается: внутри детские рисунки.
+Everything lives in `data/tanks/<code>/`: `meta.json` (name, salt and password
+hash), `settings.json` (background), `fish/` (drawings and their descriptions),
+`backgrounds/` (uploaded backgrounds), `preview.jpg` (the snapshot for the
+card). Deleted things move to `trash/` and `data/trash-tanks/` instead of being
+erased: there are children's drawings inside.
 
-Удалённое лежит в корзине 30 дней (`AQUA_TRASH_DAYS`), потом стирается
-безвозвратно: ребёнок стирает рисунок случайно, и вернуть его должно быть
-можно, но вечная корзина на публичном сервере — это склад чужих детских
-рисунков, которые люди считают удалёнными.
+Deleted items stay in the trash for 30 days (`AQUA_TRASH_DAYS`) and are then
+erased for good: a child deletes a drawing by accident and it has to be
+recoverable, but an eternal trash bin on a public server is a warehouse of
+other people's children's drawings that they believe are deleted.
 
-Папка `data/` в репозиторий не входит — это данные конкретной семьи.
-Бэкап игры = копия этой папки.
+The `data/` folder is not part of the repository — it is one family's data.
+A backup of the game is a copy of that folder.
 
-Для публичного сервера рядом лежит страница [«Правила и данные»](terms.html)
-(`/terms.html`): что хранится, сколько живёт, как удалить, права по GDPR
-и контакт. Сам сервер журнала обращений не ведёт: в лог идёт только «в такой-то
-аквариум добавлена рыбка», без адресов. Проверь, что пишет прокси перед ним, —
-и либо выключи ему access log, либо оставь текст правил как есть (там уже сказано,
-что прокси такой журнал ведёт). Подробности — «Журнал обращений» в
-[DEPLOY.md](DEPLOY.md).
+For a public server there is a [Terms and data](terms.html) page
+(`/terms.html`): what is stored, how long it lives, how to get it deleted, GDPR
+rights and a contact. The server itself keeps no access log: it only writes
+"a fish was added to such and such aquarium", with no addresses. Check what the
+proxy in front of it writes — either turn its access log off, or leave the terms
+text as it is (it already says that the proxy keeps such a log). Details are
+under "Журнал обращений" in [DEPLOY.md](DEPLOY.md).
 
-## Лицензия
+## Licence
 
-Код — [MIT](LICENSE). Фоны аквариума в `assets/backgrounds/` сделаны
-автором проекта и идут на тех же условиях.
+The code is [MIT](LICENSE). The aquarium backgrounds in `assets/backgrounds/`
+were made by the author of the project and come under the same terms.
 
-Модели рыб под лицензию проекта не подпадают: пак покупается отдельно
-и в репозиторий не входит. Силуэты в `assets/coloring/*.svg`,
-`tools/contours.json` и `assets/coloring/manifest.json` сняты обводкой
-моделей из пака — это производные 2D-контуры, а не сами модели; под
-другой набор рыб они пересобираются заново.
+The fish models are not covered by the project licence: the pack is bought
+separately and is not part of the repository. The silhouettes in
+`assets/coloring/*.svg`, `tools/contours.json` and
+`assets/coloring/manifest.json` were traced from the pack models — they are
+derived 2D contours, not the models themselves, and for a different set of fish
+they are rebuilt from scratch.
