@@ -26,12 +26,16 @@
   }
 
   var CSS = [
-    '.mdl-back{position:fixed;inset:0;z-index:100;display:grid;place-content:center;',
+    // Окно центрируется через margin:auto, а не place-content: когда оно выше
+    // экрана (или выше врезки, в которой открыто), auto-поля схлопываются
+    // в ноль, и окно прокручивается целиком. При центрировании гридом верх
+    // в такой ситуации уезжает за край и до заголовка не добраться.
+    '.mdl-back{position:fixed;inset:0;z-index:100;display:flex;overflow:auto;padding:12px;',
     '  background:rgba(2,10,18,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);',
     '  animation:mdl-fade .14s ease-out}',
     '@keyframes mdl-fade{from{opacity:0}to{opacity:1}}',
     '@keyframes mdl-pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}',
-    '.mdl-box{width:min(92vw,420px);background:#0b2033;color:var(--ink,#eaf6ff);',
+    '.mdl-box{margin:auto;width:min(92vw,420px);background:#0b2033;color:var(--ink,#eaf6ff);',
     '  border:1px solid var(--line,rgba(140,200,255,.16));border-radius:18px;',
     '  padding:24px;box-shadow:0 30px 80px rgba(0,10,20,.6);',
     '  font:15px/1.5 "Segoe UI",system-ui,sans-serif;animation:mdl-pop .16s cubic-bezier(.2,.7,.2,1)}',
@@ -67,6 +71,19 @@
     '.mdl-row button.mdl-danger:hover{background:rgba(255,107,122,.28)}',
     '.mdl-row button:focus-visible{outline:2px solid var(--accent,#58d6ff);outline-offset:2px}'
   ].join('');
+
+  // Страница может быть открыта врезкой в меню аквариума, и тогда окно
+  // ограничено высотой самой врезки: одна рыбка в списке — рамка в три сотни
+  // пикселей, а окно удаления с картинкой выше. Пока окно открыто, просим
+  // родителя подрасти; закрыв — возвращаем высоту содержимого.
+  var inFrame = window.parent !== window;
+
+  function tellHeight(px) {
+    if (!inFrame) return;
+    try {
+      window.parent.postMessage({ aqua: 'height', height: px }, location.origin);
+    } catch (e) { /* не критично */ }
+  }
 
   var styled = false;
   function ensureStyle() {
@@ -174,6 +191,12 @@
       if (input) { input.focus(); input.select(); }
       else if (buttons[focusIndex]) buttons[focusIndex].focus();
 
+      tellHeight(Math.max(document.body.scrollHeight, box.offsetHeight + 24));
+      // Картинка приезжает позже разметки и меняет высоту окна.
+      if (img) img.addEventListener('load', function () {
+        tellHeight(Math.max(document.body.scrollHeight, box.offsetHeight + 24));
+      });
+
       function value() {
         if (!input) return true;
         return input.value;
@@ -183,6 +206,7 @@
         document.removeEventListener('keydown', onKey, true);
         back.remove();
         if (before && before.focus) before.focus();
+        tellHeight(document.body.scrollHeight);
         resolve(v === true && input ? value() : v);
       }
 
