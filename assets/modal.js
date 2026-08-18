@@ -19,6 +19,12 @@
 (function () {
   'use strict';
 
+  // Подписи по умолчанию — на языке, который выбрал человек. Без i18n.js
+  // (например, в отдельном инструменте) остаётся русский, как было.
+  function t(key, ru) {
+    return window.I18N ? window.I18N.t(key) : ru;
+  }
+
   var CSS = [
     '.mdl-back{position:fixed;inset:0;z-index:100;display:grid;place-content:center;',
     '  background:rgba(2,10,18,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);',
@@ -121,12 +127,12 @@
         label.textContent = f.label;
         var value = document.createElement('b');
         value.textContent = f.value;
-        value.title = 'Нажми, чтобы скопировать';
+        value.title = t('modal.copyHint', 'Нажми, чтобы скопировать');
         value.onclick = function () {
           if (!navigator.clipboard) return;
           navigator.clipboard.writeText(f.value).then(function () {
             var was = value.textContent;
-            value.textContent = 'скопировано';
+            value.textContent = t('modal.copied', 'скопировано');
             setTimeout(function () { value.textContent = was; }, 900);
           }, function () { /* без разрешения на буфер — перепишет руками */ });
         };
@@ -211,12 +217,12 @@
     confirm: function (o) {
       o = o || {};
       return open({
-        title: o.title || 'Подтвердить?',
+        title: o.title || '',
         text: o.text, image: o.image, caption: o.caption, fields: o.fields,
         cancelValue: false,
         buttons: [
-          { label: o.cancelLabel || 'Отмена', value: false },
-          { label: o.confirmLabel || 'Удалить', value: true, kind: o.kind || 'danger' }
+          { label: o.cancelLabel || t('modal.cancel', 'Отмена'), value: false },
+          { label: o.confirmLabel || t('modal.delete', 'Удалить'), value: true, kind: o.kind || 'danger' }
         ]
       });
     },
@@ -224,11 +230,11 @@
     alert: function (o) {
       o = o || {};
       return open({
-        title: o.title || 'Сообщение',
+        title: o.title || '',
         text: o.text,
         fields: o.fields,
         cancelValue: true,
-        buttons: [{ label: o.okLabel || 'Понятно', value: true, kind: 'go' }]
+        buttons: [{ label: o.okLabel || t('modal.ok', 'Понятно'), value: true, kind: 'go' }]
       });
     },
 
@@ -256,8 +262,8 @@
         },
         cancelValue: null,
         buttons: [
-          { label: o.cancelLabel || 'Отмена', value: null },
-          { label: o.confirmLabel || 'Сохранить', value: true, kind: 'go' }
+          { label: o.cancelLabel || t('modal.cancel', 'Отмена'), value: null },
+          { label: o.confirmLabel || t('modal.save', 'Сохранить'), value: true, kind: 'go' }
         ]
       });
     }

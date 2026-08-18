@@ -79,13 +79,14 @@
   function askPass(tid, opts) {
     tid = tid || id;
     opts = opts || {};
+    var t = function (key) { return window.I18N ? window.I18N.t(key) : key; };
     return window.Modal.prompt({
-      title: opts.title || 'Пароль аквариума',
-      text: opts.text || 'Пароль спрашивают только на управление. Смотреть аквариум можно и без него.',
-      placeholder: 'например, 481902',
+      title: opts.title || t('pass.ask.title'),
+      text: opts.text || t('pass.ask.text'),
+      placeholder: t('pass.ask.ph'),
       maxLength: 60,
       mono: true,
-      confirmLabel: 'Войти'
+      confirmLabel: t('pass.ask.ok')
     }).then(function (value) {
       if (value === null) return false;
       return fetch('/api/t/' + tid + '/auth', {
@@ -96,10 +97,10 @@
         if (r.ok) { setPass(tid, value); return true; }
         return r.json().catch(function () { return {}; }).then(function (e) {
           return window.Modal.alert({
-            title: r.status === 429 ? 'Слишком много попыток' : 'Пароль не подошёл',
+            title: t(r.status === 429 ? 'pass.many.title' : 'pass.bad.title'),
             text: r.status === 429
-              ? 'Подожди ' + (e.retryAfter || 60) + ' с и попробуй снова.'
-              : 'Проверь пароль — тот, что показали при создании аквариума.'
+              ? window.I18N.t('pass.many.text', { n: e.retryAfter || 60 })
+              : t('pass.bad.text')
           }).then(function () { return false; });
         });
       }, function () { return false; });

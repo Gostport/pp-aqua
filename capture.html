@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <meta name="theme-color" content="#04101c">
-<title>Оживи свою рыбку!</title>
+<title data-t="cap.title">Оживи свою рыбку!</title>
 <style>
   :root {
     --ink: #eaf6ff;
@@ -104,49 +104,50 @@
 </head>
 <body>
 
-<a class="back" id="back">← в аквариум</a>
+<a class="back" id="back" data-t="cap.back"></a>
 
-<h1>🐠 Оживи свою рыбку!</h1>
-<p class="sub">Раскрась рыбку на листе, сфотографируй — и она поплывёт в аквариуме</p>
+<h1 data-t="cap.title"></h1>
+<p class="sub" data-t="cap.sub"></p>
 
 <!-- старт -->
 <div class="screen on" id="s-start">
   <div class="bubble">📷</div>
-  <label class="big" for="file">Сфотографировать лист</label>
+  <label class="big" for="file" data-t="cap.shoot"></label>
   <input type="file" id="file" accept="image/*" capture="environment">
-  <p class="hintline">Положи лист на стол, чтобы все четыре чёрных квадрата попали в кадр</p>
+  <p class="hintline" data-t="cap.hint"></p>
 </div>
 
 <!-- обработка -->
 <div class="screen" id="s-busy">
   <div class="spin"></div>
-  <p id="busy-text">Ищу рыбку на фото…</p>
+  <p id="busy-text" data-t="cap.searching"></p>
 </div>
 
 <!-- превью -->
 <div class="screen" id="s-preview">
   <p class="fishname" id="p-name"></p>
-  <div class="stage3d" id="stage3d"><div class="spin3d" id="spin3d">рыбка оживает…</div></div>
-  <img class="preview" id="p-img" alt="Твоя рыбка" hidden>
-  <button class="big green" id="b-release">Выпустить в аквариум! 🌊</button>
-  <label class="big ghost" for="file">Переснять</label>
+  <div class="stage3d" id="stage3d"><div class="spin3d" id="spin3d" data-t="cap.reviving"></div></div>
+  <img class="preview" id="p-img" data-t-alt="cap.photo" hidden>
+  <button class="big green" id="b-release" data-t="cap.release"></button>
+  <label class="big ghost" for="file" data-t="cap.retake"></label>
 </div>
 
 <!-- готово -->
 <div class="screen" id="s-done">
   <div class="bubble">🎉</div>
-  <p class="fishname">Рыбка уплыла в аквариум!</p>
-  <p class="sub" id="done-sub">Посмотри на большой экран — она уже там</p>
-  <label class="big" for="file">Сфотографировать ещё одну</label>
+  <p class="fishname" data-t="cap.done"></p>
+  <p class="sub" id="done-sub" data-t="cap.done.sub"></p>
+  <label class="big" for="file" data-t="cap.again"></label>
 </div>
 
 <!-- ошибка -->
 <div class="screen" id="s-error">
   <div class="bubble">🙈</div>
   <div class="err" id="err-text"></div>
-  <label class="big" for="file">Попробовать ещё раз</label>
+  <label class="big" for="file" data-t="cap.retry"></label>
 </div>
 
+<script src="/assets/i18n.js"></script>
 <script src="/vendor/three.min.js"></script>
 <script src="/vendor/GLTFLoader.js"></script>
 <!-- до fish-glb.js: он спрашивает у FishFrame оси и голову, иначе половина
@@ -189,7 +190,9 @@
     tellHeight();
 
     // Аквариум не «на большом экране», а прямо за этим окном.
-    document.getElementById('done-sub').textContent = 'Закрой окно — она уже плавает';
+    var doneSub = document.getElementById('done-sub');
+    doneSub.setAttribute('data-t', 'cap.done.sub.embed');
+    doneSub.textContent = I18N.t('cap.done.sub.embed');
 
     // Меню открывает съёмку заново — начинать надо с камеры, а не с того
     // экрана, на котором ушли. Врезка живёт между открытиями, сама она
@@ -339,7 +342,7 @@
     .then(function (m) { manifest = m; })
     .catch(function () {
       show('s-error');
-      document.getElementById('err-text').textContent = 'Не загрузился manifest.json — проверь, что сервер запущен.';
+      document.getElementById('err-text').textContent = I18N.t('cap.err.manifest');
     });
 
   // EXIF-поворот телефонных фото разруливает createImageBitmap
@@ -360,7 +363,8 @@
     show('s-busy');
     return FishCapture.processPhoto(source, manifest).then(function (r) {
       result = r;
-      document.getElementById('p-name').textContent = 'Это ' + r.title + '!';
+      document.getElementById('p-name').textContent =
+        I18N.t('cap.itis', { name: (r.titles && (r.titles[I18N.lang] || r.titles.ru)) || r.title });
       show('s-preview');
       show3D(r.kind, r.texture);
       return r;
@@ -377,28 +381,28 @@
     if (!file || !manifest) return;
     show('s-busy');
     loadBitmap(file).then(window.handlePhoto, function () {
-      document.getElementById('err-text').textContent = 'Не удалось открыть фото, попробуй ещё раз.';
+      document.getElementById('err-text').textContent = I18N.t('cap.err.photo');
       show('s-error');
     });
   });
 
   window.releaseFish = function () {         // отдельно — для автотестов
-    if (!result) return Promise.reject(new Error('нет рыбки'));
-    document.getElementById('busy-text').textContent = 'Рыбка плывёт в аквариум…';
+    if (!result) return Promise.reject(new Error(I18N.t('cap.err.nofish')));
+    document.getElementById('busy-text').textContent = I18N.t('cap.sending');
     show('s-busy');
     return fetch(Tank.api + '/fish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: result.kind, texture: result.texture })
     }).then(function (r) {
-      if (!r.ok) throw new Error('сервер ответил ' + r.status);
+      if (!r.ok) throw new Error(I18N.t('cap.err.status', { code: r.status }));
       return r.json();
     }).then(function (r) {
       show('s-done');
       tellTank();
       return r;
     }, function (err) {
-      document.getElementById('err-text').textContent = 'Не получилось отправить: ' + (err.message || err);
+      document.getElementById('err-text').textContent = I18N.t('cap.err.send', { msg: err.message || err });
       show('s-error');
       throw err;
     });

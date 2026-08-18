@@ -229,8 +229,10 @@
       }
 
       if (!kind) {
-        reject(new Error('Нашёл меток: ' + bestFound + ' из 4. Сфотографируй весь лист целиком, ' +
-          'при хорошем свете и без бликов — все четыре чёрных квадрата должны быть в кадре.'));
+        reject(new Error(window.I18N
+          ? window.I18N.t('cap.err.markers', { n: bestFound })
+          : 'Нашёл меток: ' + bestFound + ' из 4. Сфотографируй весь лист целиком, ' +
+            'при хорошем свете и без бликов — все четыре чёрных квадрата должны быть в кадре.'));
         return;
       }
 
@@ -403,6 +405,7 @@
       resolve({
         kind: kind,
         title: fish.title,
+        titles: fish.titles || null,   // название вида на языках сайта
         texture: tex.toDataURL('image/png'),
         preview: pv.toDataURL('image/png')
       });

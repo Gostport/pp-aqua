@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Аквариум — управление рыбками</title>
+<title data-t="adm.doctitle">Аквариум — управление рыбками</title>
 <style>
   :root {
     --ink: #eaf6ff;
@@ -181,25 +181,24 @@
 <body>
 
 <div class="top">
-  <h1 id="tank-name">🐠 Аквариум</h1>
+  <h1 id="tank-name"></h1>
   <span class="count" id="count"></span>
   <span class="sp"></span>
-  <a id="link-tank">Аквариум</a>
-  <a id="link-capture">Съёмка</a>
-  <a href="/print.html">Раскраски</a>
-  <a href="/">Мои аквариумы</a>
+  <a id="link-tank" data-t="adm.tank"></a>
+  <a id="link-capture" data-t="adm.capture"></a>
+  <a href="/print.html" data-t="adm.print"></a>
+  <a href="/" data-t="adm.home"></a>
 </div>
 
 <div class="gate" id="gate" hidden>
   <div class="gatebox">
-    <h2>🔒 Управление под паролем</h2>
-    <p>Смотреть аквариум можно и без него — пароль нужен, чтобы менять фон,
-       переименовывать и удалять рыбок.</p>
+    <h2 data-t="adm.gate.title"></h2>
+    <p data-t="adm.gate.text"></p>
     <input id="gate-pass" type="password" inputmode="numeric" autocomplete="off"
-           spellcheck="false" placeholder="пароль">
+           spellcheck="false" data-t-ph="adm.gate.ph">
     <div class="gaterow">
-      <a id="gate-back">← в аквариум</a>
-      <button class="go" id="gate-go">Войти</button>
+      <a id="gate-back" data-t="adm.gate.back"></a>
+      <button class="go" id="gate-go" data-t="adm.gate.enter"></button>
     </div>
     <p class="bad" id="gate-bad" hidden></p>
   </div>
@@ -207,7 +206,7 @@
 
 <div class="wrap">
   <div class="settings block">
-    <span class="label">Фон аквариума</span>
+    <span class="label" data-t="adm.bg"></span>
     <div class="bgs" id="bgs"></div>
     <input type="file" id="bg-file" accept="image/png,image/jpeg,image/webp" hidden>
   </div>
@@ -216,17 +215,18 @@
 
   <div class="empty" id="empty" hidden>
     <div class="big">🫧</div>
-    В аквариуме пока нет нарисованных рыбок.<br>
-    Раскрась лист и сфотографируй его с телефона — ссылка «Съёмка» наверху.
+    <span data-t="adm.empty"></span><br>
+    <span data-t="adm.empty.sub"></span>
   </div>
 
   <!-- Внизу, под самими рыбками: сверху эта кнопка стояла рядом с навигацией
        и норовила нажаться заодно с ней. -->
   <div class="clearrow" id="clearrow" hidden>
-    <button class="danger" id="b-clear">Удалить всех рыбок</button>
+    <button class="danger" id="b-clear" data-t="adm.clear"></button>
   </div>
 </div>
 
+<script src="/assets/i18n.js"></script>
 <script src="/vendor/three.min.js"></script>
 <script src="/vendor/GLTFLoader.js"></script>
 <script src="/assets/fish-frame.js"></script>
@@ -266,12 +266,23 @@
   document.getElementById('link-capture').href = Tank.url + '/capture';
 
   // ── имя аквариума ──
-  var meta = { id: Tank.id, name: 'Аквариум' };
+  var meta = { id: Tank.id, name: I18N.t('home.create.value') };
 
   function renderMeta() {
     document.getElementById('tank-name').textContent = '🐠 ' + meta.name;
-    document.title = meta.name + ' — управление';
+    document.title = meta.name + ' — ' + I18N.t('adm.title');
   }
+  renderMeta();
+
+  // Смена языка: подписи в разметке I18N перерисует сам, а собранное
+  // скриптом — имя, карточки рыбок, названия фонов — пересобираем тут.
+  addEventListener('aqua:lang', function () {
+    renderMeta();
+    if (!gate.hidden) showGate(gateMsg, gateVars);
+    Object.keys(cardById).forEach(function (id) { cardById[id]._retitle(); });
+    refresh();
+    loadBackgrounds();
+  });
 
   fetch(Tank.api + '/meta')
     .then(function (r) {
@@ -292,13 +303,18 @@
   var gateBad = document.getElementById('gate-bad');
   document.getElementById('gate-back').href = Tank.url;
 
-  function showGate(message) {
+  var gateMsg = null;   // ключ сообщения, чтобы пережить смену языка
+
+  function showGate(key, vars) {
+    gateMsg = key || null;
+    gateVars = vars || null;
     gate.hidden = false;
-    gateBad.hidden = !message;
-    gateBad.textContent = message || '';
+    gateBad.hidden = !key;
+    gateBad.textContent = key ? I18N.t(key, vars) : '';
     gatePass.value = '';
     gatePass.focus();
   }
+  var gateVars = null;
 
   function checkAccess() {
     // Фон меняют без пароля: это оформление, а не потеря детских рисунков.
@@ -315,7 +331,7 @@
     }).then(function (r) {
       if (r.ok) return;
       Tank.setPass(Tank.id, null);
-      showGate(r.status === 429 ? 'Слишком много попыток, подожди минуту.' : 'Пароль устарел — введи новый.');
+      showGate(r.status === 429 ? 'adm.gate.many' : 'adm.gate.old');
     }, function () { /* сервер молчит: разберётся первая же правка */ });
   }
 
@@ -336,13 +352,12 @@
         return;
       }
       return r.json().catch(function () { return {}; }).then(function (e) {
-        showGate(r.status === 429
-          ? 'Слишком много попыток. Подожди ' + (e.retryAfter || 60) + ' с.'
-          : 'Пароль не подошёл.');
+        if (r.status === 429) showGate('adm.gate.wait', { n: e.retryAfter || 60 });
+        else showGate('adm.gate.bad');
       });
     }, function () {
       btn.disabled = false;
-      showGate('Сервер не отвечает.');
+      showGate('adm.gate.noserver');
     });
   }
 
@@ -354,7 +369,7 @@
   function guard(r) {
     if (r && (r.status === 401 || r.status === 429)) {
       Tank.setPass(Tank.id, null);
-      showGate(r.status === 429 ? 'Слишком много попыток, подожди минуту.' : 'Нужен пароль аквариума.');
+      showGate(r.status === 429 ? 'adm.gate.many' : 'adm.gate.need');
       return false;
     }
     return true;
@@ -386,22 +401,30 @@
     });
   }
 
-  var titles = {};   // kind → русское название из манифеста
+  var titles = {};   // вид → название на трёх языках, из манифеста раскрасок
   fetch('/assets/coloring/manifest.json')
     .then(function (r) { return r.json(); })
     .then(function (m) {
-      m.fish.forEach(function (f) { titles[f.name] = f.title; });
+      m.fish.forEach(function (f) { titles[f.name] = f.titles || { ru: f.title }; });
       refresh();
     })
     .catch(refresh);
 
+  var LOCALE = { ru: 'ru-RU', en: 'en-GB', pl: 'pl-PL' };
+
   function fmtDate(iso) {
-    try { return new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); }
-    catch (e) { return iso || ''; }
+    try {
+      return new Date(iso).toLocaleString(LOCALE[I18N.lang] || 'ru-RU',
+        { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return iso || ''; }
   }
 
   function fishName(item) {
-    return item.type === 'pack' ? (item.title || item.model) : (titles[item.kind] || item.kind);
+    var kind = item.type === 'pack' ? item.model : item.kind;
+    var t = titles[kind];
+    if (t) return t[I18N.lang] || t.ru;
+    // Вида нет в раскрасках — остаётся то, с чем рыбку записали.
+    return item.title || kind;
   }
 
   function fishCard(item) {
@@ -418,20 +441,25 @@
       '<div class="body">' +
       '  <span class="name"></span>' +
       '  <span class="date"></span>' +
-      '  <button class="danger">Удалить</button>' +
+      '  <button class="danger">' + I18N.t('adm.fish.del') + '</button>' +
       '</div>';
 
-    card.querySelector('.date').textContent = (pack ? 'из набора · ' : '') + fmtDate(item.created);
+    // Подписи карточки собраны скриптом, значит и обновлять их при смене
+    // языка придётся скриптом же — данные для этого держим на самом узле.
+    card._retitle = function () {
+      card.querySelector('.date').textContent =
+        (pack ? I18N.t('adm.fish.pack') : '') + fmtDate(item.created);
+      card.querySelector('button').textContent = I18N.t('adm.fish.del');
+    };
+    card._retitle();
 
     card.querySelector('button').onclick = function () {
       var btn = this, shot = card.querySelector('img');
       Modal.confirm({
-        title: 'Удалить рыбку?',
+        title: I18N.t('adm.fish.del.title'),
         // Про рисунок говорим отдельно: он единственный здесь
         // невосстановимый, и человеку важно знать, что копия остаётся.
-        text: pack
-          ? 'Она уплывёт из аквариума. Запустить такую же можно снова в любой момент.'
-          : 'Рисунок переедет в корзину на сервере — если что, его можно вернуть.',
+        text: I18N.t(pack ? 'adm.fish.del.pack' : 'adm.fish.del.painted'),
         image: shot ? shot.src : null,
         caption: card.querySelector('.name').textContent
       }).then(function (ok) {
@@ -456,7 +484,8 @@
       var seen = {};
       document.getElementById('empty').hidden = list.length > 0;
       document.getElementById('clearrow').hidden = !list.length;
-      document.getElementById('count').textContent = list.length ? 'рыбок: ' + list.length : '';
+      document.getElementById('count').textContent =
+        list.length ? I18N.t('adm.fish.count', { n: list.length }) : '';
 
       list.slice().reverse().forEach(function (item) {
         seen[item.id] = true;
@@ -476,7 +505,7 @@
 
       paintCardThumbs();
     }).catch(function () {
-      document.getElementById('count').textContent = 'сервер недоступен — запусти node server.js';
+      document.getElementById('count').textContent = I18N.t('adm.noserver');
     });
   }
 
@@ -484,10 +513,9 @@
     var n = document.querySelectorAll('#grid .card').length;
     if (!n) return;
     Modal.confirm({
-      title: 'Очистить аквариум?',
-      text: 'Из аквариума уплывут все рыбки — ' + n + ' шт. Рисунки переедут в корзину ' +
-            'на сервере, вернуть их можно, но из списка они пропадут.',
-      confirmLabel: 'Удалить всех рыбок'
+      title: I18N.t('adm.clear.title'),
+      text: I18N.t('adm.clear.text', { n: n }),
+      confirmLabel: I18N.t('adm.clear')
     }).then(function (ok) {
       if (!ok) return;
       Tank.send(Tank.api + '/fish', { method: 'DELETE' })
@@ -515,7 +543,7 @@
     list.forEach(function (bg) {
       // Имя файла человеку ничего не говорит, а подпись у карточки нужна:
       // без неё плитки читаются как обрывки, а не как выбор из набора.
-      var title = bg.custom ? 'Свой фон' : 'Фон ' + (++n);
+      var title = bg.custom ? I18N.t('adm.bg.own') : I18N.t('adm.bg.one', { n: ++n });
 
       var item = document.createElement('button');
       item.className = 'bgitem';
@@ -540,13 +568,13 @@
         var del = document.createElement('span');
         del.className = 'bgdel';
         del.textContent = '×';
-        del.title = 'Удалить этот фон';
+        del.title = I18N.t('adm.bg.del');
         del.onclick = function (e) {
           e.stopPropagation();
           e.preventDefault();
           Modal.confirm({
-            title: 'Удалить фон?',
-            text: 'Файл будет стёрт безвозвратно — в отличие от рыбок, копии не остаётся.',
+            title: I18N.t('adm.bg.del.title'),
+            text: I18N.t('adm.bg.del.text'),
             image: bg.url
           }).then(function (ok) {
             if (!ok) return;
@@ -564,7 +592,7 @@
     add.className = 'bgadd';
     add.id = 'bg-add';
     add.type = 'button';
-    add.innerHTML = '<span class="plus">+</span><span class="t">свой фон</span>';
+    add.innerHTML = '<span class="plus">+</span><span class="t">' + I18N.t('adm.bg.add') + '</span>';
     add.onclick = function () { bgFile.click(); };
     bgBox.appendChild(add);
 
@@ -603,7 +631,7 @@
           URL.revokeObjectURL(url);
           var fr = new FileReader();
           fr.onload = function () { resolve(fr.result); };
-          fr.onerror = function () { reject(new Error('не удалось прочитать файл')); };
+          fr.onerror = function () { reject(new Error(I18N.t('adm.bg.err.read'))); };
           fr.readAsDataURL(file);
           return;
         }
@@ -618,7 +646,7 @@
         resolve(c.toDataURL('image/jpeg', 0.88));
       };
 
-      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('это не картинка')); };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error(I18N.t('adm.bg.err.img'))); };
       img.src = url;
     });
   }
@@ -629,7 +657,7 @@
     if (!file) return;
 
     var add = document.getElementById('bg-add');
-    if (add) { add.dataset.busy = '1'; add.innerHTML = '<span>загружаю…</span>'; }
+    if (add) { add.dataset.busy = '1'; add.innerHTML = '<span>' + I18N.t('adm.bg.busy') + '</span>'; }
 
     prepare(file)
       .then(function (dataUrl) {
@@ -649,7 +677,7 @@
         });
       })
       .catch(function (e) {
-        Modal.alert({ title: 'Фон не загрузился', text: String(e.message || e) });
+        Modal.alert({ title: I18N.t('adm.bg.fail'), text: String(e.message || e) });
         return loadBackgrounds();
       });
   };

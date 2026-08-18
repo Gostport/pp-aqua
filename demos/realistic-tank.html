@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Риф-аквариум — реалистичный рендер</title>
+<title data-t="tank.doctitle">Аквариум</title>
 <link rel="stylesheet" href="/assets/ui.css">
 <style>
   body { background: #101013; }
@@ -124,6 +124,19 @@
   .menu .packitem .t { font-size: 11px; line-height: 1.25; color: var(--muted); text-align: center; }
   .menu .packitem[disabled] { opacity: 0.5; cursor: default; }
 
+  .menu .langrow { display: flex; justify-content: center; margin-top: 12px; }
+  .menu .langpick { display: inline-flex; gap: 4px; }
+  .menu .langpick button {
+    appearance: none; cursor: pointer; font: inherit; font-size: 11.5px; letter-spacing: .5px;
+    padding: 4px 10px; border-radius: 8px; border: 1px solid transparent;
+    background: transparent; color: var(--muted);
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .menu .langpick button:hover { color: var(--ink); }
+  .menu .langpick button[aria-pressed="true"] {
+    color: var(--accent); border-color: var(--line); background: rgba(88, 214, 255, 0.1);
+  }
+
   /* Закрыть меню можно и нажатием мимо карточки, но на такое надо
      догадаться — крестик виден сразу и не занимает целую строку. */
   .menu .x {
@@ -154,92 +167,93 @@
 
 <!-- Сцена занимает весь экран, кнопок поверх неё нет: управление живёт
      в меню по клику, а настройки — в admin.html. -->
-<div class="loading" id="loading">Наполняю аквариум…</div>
+<div class="loading" id="loading" data-t="tank.loading"></div>
 
 <div class="menu" id="menu" hidden>
   <div class="card" id="menu-card">
-    <button class="x" id="m-close" type="button" title="Закрыть меню" aria-label="Закрыть меню">✕</button>
+    <button class="x" id="m-close" type="button" data-t-title="menu.close" aria-label="✕">✕</button>
 
     <div id="menu-main">
-      <h2><button class="rename" id="m-rename" type="button" title="Переименовать аквариум">
+      <h2><button class="rename" id="m-rename" type="button" data-t-title="menu.rename.hint">
         <span id="m-name">Аквариум</span><span class="pen">✏️</span>
       </button></h2>
       <p class="who"><span id="m-count">…</span> ·
-        <button class="code" id="m-code" type="button" title="Скопировать ссылку на аквариум">
-          код <b></b> <span class="pen">🔗</span>
+        <button class="code" id="m-code" type="button" data-t-title="menu.copy">
+          <span data-t="menu.code"></span> <b></b> <span class="pen">🔗</span>
         </button>
-        <button class="code" id="m-key" type="button" title="Пароль аквариума">🔑 пароль</button>
+        <button class="code" id="m-key" type="button" data-t-title="menu.pass.title"></button>
       </p>
 
       <div class="steps" id="m-steps" hidden>
-        <b>🫧 В аквариуме пока никого</b>
-        <span>Распечатай раскраску → раскрась фломастерами → сфотографируй с телефона.
-              Рыбка поплывёт здесь через пару секунд.</span>
+        <b data-t="menu.steps.title"></b>
+        <span data-t="menu.steps.text"></span>
       </div>
 
       <button class="item main" id="m-capture" type="button">
         <span class="ico">📷</span>
-        <span><b>Сфотографировать рыбку</b><i>раскрашенный лист оживает в аквариуме</i></span>
+        <span><b data-t="menu.capture.title"></b><i data-t="menu.capture.sub"></i></span>
       </button>
       <button class="item" id="m-pack" type="button">
         <span class="ico">🐠</span>
-        <span><b>Запустить готовую рыбку</b><i>из набора, без раскрашивания</i></span>
+        <span><b data-t="menu.pack.title"></b><i data-t="menu.pack.sub"></i></span>
       </button>
       <button class="item" id="m-feed" type="button">
         <span class="ico">🐟</span>
-        <span><b>Покормить</b><i>рыбки соберутся на корм</i></span>
+        <span><b data-t="menu.feed.title"></b><i data-t="menu.feed.sub"></i></span>
       </button>
       <button class="item" id="m-print" type="button">
         <span class="ico">🖨️</span>
-        <span><b>Раскраски для печати</b><i>12 видов рыбок на обычном листе A4</i></span>
+        <span><b data-t="menu.print.title"></b><i data-t="menu.print.sub"></i></span>
       </button>
       <button class="item" id="m-bg" type="button">
         <span class="ico">🖼️</span>
-        <span><b>Сменить фон</b><i>картинка, на фоне которой плавают рыбки</i></span>
+        <span><b data-t="menu.bg.title"></b><i data-t="menu.bg.sub"></i></span>
       </button>
       <button class="item" id="m-fish" type="button">
         <span class="ico">🗑️</span>
-        <span><b>Убрать рыбок</b><i>удалить лишних из аквариума</i></span>
+        <span><b data-t="menu.fish.title"></b><i data-t="menu.fish.sub"></i></span>
       </button>
       <a class="item" href="/">
         <span class="ico">🏠</span>
-        <span><b>Мои аквариумы</b><i>другие аквариумы и как открыть этот на телефоне</i></span>
+        <span><b data-t="menu.home.title"></b><i data-t="menu.home.sub"></i></span>
       </a>
+
+      <div class="langrow"><span id="lang"></span></div>
     </div>
 
     <div id="menu-print" hidden>
-      <button class="goback" id="m-printback" type="button">← назад</button>
-      <iframe class="capframe" id="printframe" title="Раскраски для печати"></iframe>
+      <button class="goback" id="m-printback" type="button" data-t="menu.back"></button>
+      <iframe class="capframe" id="printframe" data-t-title="tank.frame.print"></iframe>
     </div>
 
     <div id="menu-bg" hidden>
-      <button class="goback" id="m-bgback" type="button">← назад</button>
-      <iframe class="capframe" id="bgframe" title="Фон аквариума"></iframe>
+      <button class="goback" id="m-bgback" type="button" data-t="menu.back"></button>
+      <iframe class="capframe" id="bgframe" data-t-title="tank.frame.bg"></iframe>
     </div>
 
     <div id="menu-fish" hidden>
-      <button class="goback" id="m-fishback" type="button">← назад</button>
-      <iframe class="capframe" id="fishframe" title="Рыбки аквариума"></iframe>
+      <button class="goback" id="m-fishback" type="button" data-t="menu.back"></button>
+      <iframe class="capframe" id="fishframe" data-t-title="tank.frame.fish"></iframe>
     </div>
 
     <div id="menu-capture" hidden>
-      <button class="goback" id="m-capback" type="button">← назад</button>
+      <button class="goback" id="m-capback" type="button" data-t="menu.back"></button>
       <!-- Страница съёмки одна на всех: и по адресу /t/<id>/capture с телефона,
            и здесь, во врезке. Дублировать её разбор фото и превью в сцене
            было бы вторым таким же кодом, который начнёт расходиться. -->
-      <iframe class="capframe" id="capframe" title="Съёмка рыбки"></iframe>
+      <iframe class="capframe" id="capframe" data-t-title="tank.frame.capture"></iframe>
     </div>
 
     <div id="menu-pack" hidden>
-      <button class="goback" id="m-packback" type="button">← назад</button>
-      <h2>Кого запустить?</h2>
-      <p class="who">Рыбка из набора появится в аквариуме сразу</p>
-      <div class="packgrid" id="packgrid"><p class="who">загружаю набор…</p></div>
+      <button class="goback" id="m-packback" type="button" data-t="menu.back"></button>
+      <h2 data-t="menu.picker.title"></h2>
+      <p class="who" data-t="menu.picker.sub"></p>
+      <div class="packgrid" id="packgrid"></div>
     </div>
   </div>
 </div>
 
-<div class="taphint" id="taphint" hidden>нажми в любом месте — покажу меню</div>
+<div class="taphint" id="taphint" data-t="menu.hint" hidden></div>
 
 <!-- Пути абсолютные: страница отдаётся и по /t/<id>, и по своему файловому
      адресу, относительные ссылки сломались бы на первом же. -->
@@ -248,6 +262,7 @@
 <script src="/vendor/GLTFLoader.js"></script>
 <script src="/vendor/DRACOLoader.js"></script>
 <script src="/vendor/SkeletonUtils.js"></script>
+<script src="/assets/i18n.js"></script>
 <script src="/assets/fish-frame.js"></script>
 <script src="/assets/fish-thumbs.js"></script>
 <script src="/assets/modal.js"></script>
@@ -260,7 +275,7 @@
   // Такое бывает, если открыть файл напрямую, минуя /t/<id>.
   if (!Tank.id) {
     document.getElementById('loading').innerHTML =
-      'Не выбран аквариум. <a href="/" style="color:#58d6ff">На главную →</a>';
+      I18N.t('tank.nopick') + ' <a href="/" style="color:#58d6ff">' + I18N.t('tank.home') + '</a>';
     return;
   }
 
@@ -1401,6 +1416,7 @@
 
   var codeBtn = document.getElementById('m-code');
   codeBtn.querySelector('b').textContent = Tank.id;
+  I18N.mount(document.getElementById('lang'));
 
   // Ссылку отдаём целиком: по коду аквариум открывают на другом устройстве,
   // но набирать адрес руками никому не хочется.
@@ -1408,7 +1424,7 @@
     var link = location.origin + Tank.url;
     var done = function () {
       var was = codeBtn.innerHTML;
-      codeBtn.textContent = 'ссылка скопирована';
+      codeBtn.textContent = I18N.t('menu.copied');
       setTimeout(function () { codeBtn.innerHTML = was; }, 2000);
     };
     // Буфера может не быть вовсе: с телефона аквариум открывают по http,
@@ -1416,9 +1432,9 @@
     // выделенной — скопировать вручную всё равно можно.
     var manual = function () {
       Modal.prompt({
-        title: 'Ссылка на аквариум',
-        text: 'Скопировать сам не смог — забери отсюда. По ней аквариум откроется на любом устройстве.',
-        value: link, mono: true, confirmLabel: 'Готово'
+        title: I18N.t('menu.link.title'),
+        text: I18N.t('menu.link.text'),
+        value: link, mono: true, confirmLabel: I18N.t('menu.link.ok')
       });
     };
     if (navigator.clipboard) navigator.clipboard.writeText(link).then(done, manual);
@@ -1553,29 +1569,48 @@
       })
       .catch(function () {
         var t = btn.querySelector('.t');
-        if (t) t.textContent = 'не вышло';
+        if (t) t.textContent = I18N.t('menu.picker.failed');
       })
       .then(function () { btn.disabled = false; });
+  }
+
+  // Названия видов берём из манифеста раскрасок: там они на трёх языках и
+  // там же единственный список — в pack.json лежат только русские подписи.
+  var sheetTitles = {};
+
+  function packTitle(item) {
+    var t = sheetTitles[item.name];
+    return (t && (t[I18N.lang] || t.ru)) || item.title || item.name;
   }
 
   function listPack() {
     if (packListed) return;
     packListed = true;
+    fetch('/assets/coloring/manifest.json')
+      .then(function (r) { return r.json(); })
+      .then(function (m) {
+        (m.fish || []).forEach(function (f) { sheetTitles[f.name] = f.titles || { ru: f.title }; });
+      })
+      .catch(function () { /* останутся русские подписи из пака */ })
+      .then(fillPack);
+  }
+
+  function fillPack() {
     FishThumbs.withPack(function (idx) {
       // Только виды с листом раскраски: набор и раскраски — один и тот же
       // зоопарк, иначе ребёнок видит в аквариуме рыбу, которую не раскрасить.
       var list = (idx.__list || []).filter(function (m) { return m.sheet; });
       packGrid.textContent = '';
       if (!list.length) {
-        packGrid.innerHTML = '<p class="who">Набор не собран — запусти tools\\convert-pack.ps1</p>';
+        packGrid.innerHTML = '<p class="who">' + I18N.t('menu.picker.nopack') + '</p>';
         return;
       }
       list.forEach(function (item) {
         var b = document.createElement('button');
         b.className = 'packitem';
         b.type = 'button';
-        b.innerHTML = '<span class="ph">рисую…</span><span class="t"></span>';
-        b.querySelector('.t').textContent = item.title;
+        b.innerHTML = '<span class="ph">' + I18N.t('menu.picker.drawing') + '</span><span class="t"></span>';
+        b.querySelector('.t').textContent = packTitle(item);
         b.onclick = function () { addPackFish(item.name, b); };
         packGrid.appendChild(b);
 
@@ -1595,7 +1630,7 @@
   // Переименование. Имя — единственная настройка, которую правят, глядя на
   // сам аквариум, поэтому она здесь, а не в управлении. Пароль спрашиваем
   // только если правка вернулась отказом: на своём устройстве его уже знают.
-  var tankName = 'Аквариум';
+  var tankName = I18N.t('tank.doctitle');
 
   function sendName(name) {
     return Tank.send(Tank.api + '/meta', { method: 'PATCH', body: JSON.stringify({ name: name }) });
@@ -1609,11 +1644,11 @@
 
   document.getElementById('m-rename').onclick = function () {
     Modal.prompt({
-      title: 'Название аквариума',
-      text: 'Видно только тебе — в списке аквариумов и в заголовке этой страницы.',
+      title: I18N.t('menu.rename.title'),
+      text: I18N.t('menu.rename.text'),
       value: tankName,
       maxLength: 60,
-      confirmLabel: 'Сохранить'
+      confirmLabel: I18N.t('menu.rename.ok')
     }).then(function (name) {
       if (name === null) return;
       name = name.trim();
@@ -1622,10 +1657,7 @@
       var save = function (r) {
         if (r.ok) return r.json().then(function (m) { applyName(m.name); });
         if (r.status !== 401 && r.status !== 429) return;
-        return Tank.askPass(Tank.id, {
-          title: 'Пароль аквариума',
-          text: 'Переименовать может тот, кто знает пароль.'
-        }).then(function (got) {
+        return Tank.askPass(Tank.id, { title: I18N.t('menu.pass.title') }).then(function (got) {
           if (!got) return;
           return sendName(name).then(function (r2) {
             if (r2.ok) return r2.json().then(function (m) { applyName(m.name); });
@@ -1634,7 +1666,7 @@
       };
 
       return sendName(name).then(save, function () {
-        Modal.alert({ title: 'Не переименовалось', text: 'Сервер не отвечает.' });
+        Modal.alert({ title: I18N.t('menu.rename.fail'), text: I18N.t('menu.fail.server') });
       });
     });
   };
@@ -1647,37 +1679,39 @@
 
   function renderKey() {
     keyBtn.classList.toggle('warn', !tankLocked);
-    keyBtn.textContent = tankLocked ? '🔑 пароль' : '🔓 задать пароль';
+    keyBtn.textContent = I18N.t(tankLocked ? 'menu.pass' : 'menu.pass.set');
   }
 
   function savePass(value) {
     return Tank.send(Tank.api + '/password', { body: JSON.stringify({ password: value }) });
   }
 
-  function askNewPass(title) {
+  function askNewPass(titleKey) {
     return Modal.prompt({
-      title: title,
-      text: 'От 4 знаков. Цифры удобнее: их диктуют по телефону и набирают на пульте. ' +
-            'Старый пароль перестанет работать на всех устройствах.',
-      value: '', placeholder: 'новый пароль', maxLength: 60, mono: true,
-      confirmLabel: 'Сохранить'
+      title: I18N.t(titleKey),
+      text: I18N.t('menu.newpass.text'),
+      value: '', placeholder: I18N.t('menu.newpass.ph'), maxLength: 60, mono: true,
+      confirmLabel: I18N.t('menu.rename.ok')
     }).then(function (value) {
       if (value === null) return;
       value = value.trim();
       if (value.length < 4) {
-        return Modal.alert({ title: 'Слишком короткий', text: 'Нужно хотя бы четыре знака.' });
+        return Modal.alert({
+          title: I18N.t('menu.newpass.short.title'),
+          text: I18N.t('menu.newpass.short.text')
+        });
       }
 
       var saved = function (r) {
-        if (!r.ok) return Modal.alert({ title: 'Не вышло', text: 'Сервер не принял пароль.' });
+        if (!r.ok) return Modal.alert({ title: I18N.t('menu.fail.title'), text: I18N.t('menu.fail.pass') });
         Tank.setPass(Tank.id, value);
         tankLocked = true;
         renderKey();
         return Modal.alert({
-          title: 'Пароль сохранён',
-          text: 'Запиши его: восстановить пароль негде. Код аквариума не менялся — по нему по-прежнему смотрят.',
-          fields: [{ label: 'Новый пароль', value: value }],
-          okLabel: 'Записал'
+          title: I18N.t('menu.newpass.saved.title'),
+          text: I18N.t('menu.newpass.saved.text'),
+          fields: [{ label: I18N.t('menu.newpass.saved.field'), value: value }],
+          okLabel: I18N.t('menu.newpass.saved.ok')
         });
       };
 
@@ -1685,44 +1719,50 @@
         // Пароль меняет тот, кто знает старый: на чужом устройстве спросим.
         if (r.status !== 401 && r.status !== 429) return saved(r);
         return Tank.askPass(Tank.id, {
-          title: 'Старый пароль',
-          text: 'Сменить пароль может тот, кто знает нынешний.'
+          title: I18N.t('menu.oldpass.title'),
+          text: I18N.t('menu.oldpass.text')
         }).then(function (got) {
           if (!got) return;
           return savePass(value).then(saved);
         });
       }, function () {
-        Modal.alert({ title: 'Не вышло', text: 'Сервер не отвечает.' });
+        Modal.alert({ title: I18N.t('menu.fail.title'), text: I18N.t('menu.fail.server') });
       });
     });
   }
 
   function showAccess() {
     return Modal.confirm({
-      title: 'Доступ к аквариуму',
-      text: 'По коду аквариум смотрят, по паролю им управляют. Оба сохранены в этом браузере — ' +
-            'если почистить его данные, восстановить их будет негде.',
+      title: I18N.t('menu.access.title'),
+      text: I18N.t('menu.access.text'),
       fields: [
-        { label: 'Код аквариума', value: Tank.id },
-        { label: 'Пароль', value: Tank.pass() || '—' }
+        { label: I18N.t('home.created.code'), value: Tank.id },
+        { label: I18N.t('home.created.pass'), value: Tank.pass() || '—' }
       ],
-      cancelLabel: 'Готово',
-      confirmLabel: 'Сменить пароль',
+      cancelLabel: I18N.t('menu.access.done'),
+      confirmLabel: I18N.t('menu.access.change'),
       kind: 'go'
     }).then(function (change) {
-      if (change) return askNewPass('Новый пароль аквариума');
+      if (change) return askNewPass('menu.newpass.title');
     });
   }
 
   keyBtn.onclick = function () {
-    if (!tankLocked) return askNewPass('Пароль для аквариума');
+    if (!tankLocked) return askNewPass('menu.newpass.first');
     if (Tank.pass()) return showAccess();
     // Пароля на этом устройстве нет — сначала убедимся, что его знают.
-    Tank.askPass(Tank.id, {
-      title: 'Пароль аквариума',
-      text: 'Введи пароль, чтобы посмотреть его и при желании сменить.'
-    }).then(function (got) { if (got) showAccess(); });
+    Tank.askPass(Tank.id, { title: I18N.t('menu.pass.title') })
+      .then(function (got) { if (got) showAccess(); });
   };
+
+  // Язык переключили — обновляем то, что собрано скриптом, а не разметкой.
+  addEventListener('aqua:lang', function () {
+    renderKey();
+    setFishCount(fishCount || 0);
+    packListed = false;
+    packGrid.textContent = '';
+    if (!menuPack.hidden) listPack();
+  });
 
   document.getElementById('m-pack').onclick = showPackView;
   document.getElementById('m-packback').onclick = showMainView;
@@ -1763,12 +1803,7 @@
   };
 
   function fishWord(n) {
-    if (!n) return 'рыбок пока нет';
-    var t = n % 10, h = n % 100;
-    var w = (t === 1 && h !== 11) ? 'рыбка'
-          : (t >= 2 && t <= 4 && (h < 12 || h > 14)) ? 'рыбки'
-          : 'рыбок';
-    return n + ' ' + w;
+    return n ? I18N.plural(n, 'fish') : I18N.t('tank.nofish');
   }
 
   // Пустой аквариум открывает меню сам — один раз и только если человек
@@ -1793,8 +1828,8 @@
   fetch(Tank.api + '/meta').then(function (r) {
     if (!r.ok) {
       Tank.forget(Tank.id);
-      fail('Аквариум не найден — возможно, его удалили или в коде опечатка.' +
-           '<br><a href="/" style="color:#58d6ff">К моим аквариумам →</a>');
+      fail(I18N.t('tank.notank') +
+           '<br><a href="/" style="color:#58d6ff">' + I18N.t('tank.tolist') + '</a>');
       return;
     }
     return r.json().then(function (meta) {
@@ -1804,16 +1839,16 @@
       tankLocked = !!meta.locked;
       renderKey();
       if (meta.locked && !Tank.pass()) {
-        document.querySelector('#m-fish i').textContent = 'удалить лишних — нужен пароль';
+        document.querySelector('#m-fish i').textContent = I18N.t('menu.fish.sub.pass');
       }
       try {
         init();
       } catch (err) {
-        fail('<b>Сцена не запустилась</b><br>' + String(err && err.message || err));
+        fail(I18N.t('tank.crash', { msg: String(err && err.message || err) }));
       }
     });
   }).catch(function () {
-    fail('Сервер недоступен. Запусти <code>node server.js</code> и обнови страницу.');
+    fail(I18N.t('tank.noserver'));
   });
 })();
 </script>

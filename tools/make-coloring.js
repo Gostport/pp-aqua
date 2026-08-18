@@ -40,23 +40,44 @@ const STROKE = 1.6;        // мм
 const STROKE_COLOR = '#8a8a8a';
 
 // ── виды ────────────────────────────────────────────────────────────────────
-// name — папка в assets/models/pack, title — что видит ребёнок,
+// name — папка в assets/models/pack, titles — что видит ребёнок, на трёх
+// языках сайта (лист печатается на том, который выбран),
 // len — длина рыбки в аквариуме (метры сцены),
 // eye — [z, y] в долях длины тела; null = посчитать автоматически.
+const LANGS = ['ru', 'en', 'pl'];
+
 const SPECIES = [
-  { name: 'clownfish',              title: 'Рыба-клоун',         len: 1.5, eye: null },
-  { name: 'bluetang',               title: 'Голубой хирург',     len: 1.9, eye: null },
-  { name: 'chelmonrostratus',       title: 'Рыба-пинцет',        len: 1.7, eye: null },
-  { name: 'clowntriggerfish',       title: 'Спинорог',           len: 2.1, eye: null },
-  { name: 'frenchangelfish',        title: 'Французский ангел',  len: 2.4, eye: null },
-  { name: 'fusilierfish',           title: 'Цезио',              len: 1.6, eye: null },
-  { name: 'blackspottedsweetlips',  title: 'Ворчун',             len: 2.3, eye: null },
-  { name: 'coralgrouper',           title: 'Групер',             len: 2.6, eye: null },
-  { name: 'browntang',              title: 'Бурый хирург',       len: 1.8, eye: null },
-  { name: 'bicolorangelfish',       title: 'Двухцветный ангел',  len: 1.7, eye: null },
-  { name: 'bluecheekbutterflyfish', title: 'Рыба-бабочка',       len: 1.5, eye: null },
-  { name: 'discus1',                title: 'Дискус',             len: 1.8, eye: null }
+  { name: 'clownfish',              len: 1.5, eye: null,
+    titles: { ru: 'Рыба-клоун',        en: 'Clownfish',                pl: 'Błazenek' } },
+  { name: 'bluetang',               len: 1.9, eye: null,
+    titles: { ru: 'Голубой хирург',    en: 'Blue tang',                pl: 'Chirurg niebieski' } },
+  { name: 'chelmonrostratus',       len: 1.7, eye: null,
+    titles: { ru: 'Рыба-пинцет',       en: 'Copperband butterflyfish', pl: 'Chelmon' } },
+  { name: 'clowntriggerfish',       len: 2.1, eye: null,
+    titles: { ru: 'Спинорог',          en: 'Clown triggerfish',        pl: 'Rogatnica klaun' } },
+  { name: 'frenchangelfish',        len: 2.4, eye: null,
+    titles: { ru: 'Французский ангел', en: 'French angelfish',         pl: 'Pomakant francuski' } },
+  { name: 'fusilierfish',           len: 1.6, eye: null,
+    titles: { ru: 'Цезио',             en: 'Fusilier',                 pl: 'Cezjo' } },
+  { name: 'blackspottedsweetlips',  len: 2.3, eye: null,
+    titles: { ru: 'Ворчун',            en: 'Sweetlips',                pl: 'Chrząkiew' } },
+  { name: 'coralgrouper',           len: 2.6, eye: null,
+    titles: { ru: 'Групер',            en: 'Coral grouper',            pl: 'Strzępiel koralowy' } },
+  { name: 'browntang',              len: 1.8, eye: null,
+    titles: { ru: 'Бурый хирург',      en: 'Brown tang',               pl: 'Chirurg brązowy' } },
+  { name: 'bicolorangelfish',       len: 1.7, eye: null,
+    titles: { ru: 'Двухцветный ангел', en: 'Bicolor angelfish',        pl: 'Pomakant dwubarwny' } },
+  { name: 'bluecheekbutterflyfish', len: 1.5, eye: null,
+    titles: { ru: 'Рыба-бабочка',      en: 'Butterflyfish',            pl: 'Motylek' } },
+  { name: 'discus1',                len: 1.8, eye: null,
+    titles: { ru: 'Дискус',            en: 'Discus',                   pl: 'Paletka' } }
 ];
+
+// Имя файла листа: русский лежит по старому адресу, остальные рядом с ним.
+// Так уже напечатанные и разосланные ссылки на .svg остаются рабочими.
+function sheetFile(name, lang) {
+  return name + (lang === 'ru' ? '' : '.' + lang) + '.svg';
+}
 
 // ── коды меток ──────────────────────────────────────────────────────────────
 const MIN_DIST = 4;   // минимум различий между любыми двумя кодами и их поворотами
@@ -446,7 +467,7 @@ const INNER_FINS = (() => {
   } catch (e) { return {}; }
 })();
 
-function buildSvg(fish) {
+function buildSvg(fish, lang) {
   const st = fish.sheetTransform;
   const X = (z) => (st.ox + st.scale * z).toFixed(2);
   const Y = (y) => (st.oy - st.scale * y).toFixed(2);
@@ -476,7 +497,7 @@ function buildSvg(fish) {
   parts.push(
     // Глаз на листе не печатаем: ребёнок рисует свой, где захочет. Координата
     // всё равно считается и лежит в манифесте — вернуть подсказку легко.
-    `  <text x="${SHEET.w / 2}" y="197" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="7" font-weight="600" fill="#444">${fish.title}</text>`,
+    `  <text x="${SHEET.w / 2}" y="197" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="7" font-weight="600" fill="#444">${fish.titles[lang]}</text>`,
     '</svg>'
   );
   return parts.join('\n') + '\n';
@@ -504,9 +525,16 @@ function main() {
     const f = {
       id: i + 1,
       name: s.name,
-      title: s.title,
+      // title и svg — русские: так манифест читали до появления языков,
+      // и старые ссылки на листы от этого не ломаются.
+      title: s.titles.ru,
+      titles: s.titles,
       model: '/assets/models/pack/' + s.name + '/' + s.name + '.gltf',
-      svg: 'assets/coloring/' + s.name + '.svg',
+      svg: 'assets/coloring/' + sheetFile(s.name, 'ru'),
+      sheets: LANGS.reduce((acc, lang) => {
+        acc[lang] = 'assets/coloring/' + sheetFile(s.name, lang);
+        return acc;
+      }, {}),
       length: s.len,
       markers: {
         tl: bitsOf(codes[i * 4]),
@@ -529,7 +557,9 @@ function main() {
   }
 
   for (const f of fish) {
-    fs.writeFileSync(path.join(OUT, f.name + '.svg'), buildSvg(f), 'utf8');
+    for (const lang of LANGS) {
+      fs.writeFileSync(path.join(OUT, sheetFile(f.name, lang)), buildSvg(f, lang), 'utf8');
+    }
   }
   fs.writeFileSync(
     path.join(OUT, 'manifest.json'),

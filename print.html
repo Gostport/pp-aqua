@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Раскраски — печать шаблонов</title>
+<title data-t="print.title">Раскраски — печать шаблонов</title>
 <style>
   body { margin: 0; background: #223; font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
   .top {
@@ -71,16 +71,16 @@
 </head>
 <body>
 <div class="top">
-  <h1>Раскраски — шаблоны для печати</h1>
-  <a href="/">← мои аквариумы</a>
-  <button onclick="document.body.classList.remove('one'); print()">Печать всех</button>
+  <h1 data-t="print.title"></h1>
+  <a href="/" data-t="print.home"></a>
+  <button onclick="document.body.classList.remove('one'); print()" data-t="print.all"></button>
 </div>
 <div class="wrap">
-  <p class="note">Печатай на обычной А4 в альбомной ориентации, масштаб 100% (без «вписать в страницу») —
-  размеры меток важны для распознавания. Чёрные квадраты в углах не закрашивать!</p>
+  <p class="note" data-t="print.note"></p>
 
   <div id="list"></div>
 </div>
+<script src="/assets/i18n.js"></script>
 <script>
 // Врезка в меню аквариума: своя подложка не нужна, а высоту надо сообщать
 // наружу — карточка меню сама её не угадает.
@@ -109,6 +109,17 @@ function printOne(name) {
   print();
 }
 
+// Лист у каждого вида свой на каждый язык — подпись под рыбой печатается
+// на том же языке, что и страница. Метки в углах во всех версиях одни и те
+// же, так что распознаётся любой распечатанный лист.
+function sheetOf(f) {
+  return '/' + ((f.sheets && f.sheets[I18N.lang]) || f.svg).replace(/^\//, '');
+}
+
+function titleOf(f) {
+  return (f.titles && (f.titles[I18N.lang] || f.titles.ru)) || f.title;
+}
+
 fetch('/assets/coloring/manifest.json')
   .then(function (r) { return r.json(); })
   .then(function (m) {
@@ -121,18 +132,23 @@ fetch('/assets/coloring/manifest.json')
       var bar = document.createElement('div');
       bar.className = 'bar';
       var b = document.createElement('b');
-      b.textContent = f.title;
       var btn = document.createElement('button');
-      btn.textContent = 'Печать этого листа';
+      btn.setAttribute('data-t', 'print.one');
+      btn.textContent = I18N.t('print.one');
       btn.onclick = function () { printOne(f.name); };
       bar.appendChild(b);
       bar.appendChild(btn);
 
       var img = document.createElement('img');
       img.className = 'sheet';
-      img.src = '/' + f.svg.replace(/^\//, '');
-      img.alt = f.title;
       img.loading = 'lazy';
+
+      var retitle = function () {
+        b.textContent = img.alt = titleOf(f);
+        img.src = sheetOf(f);
+      };
+      retitle();
+      addEventListener('aqua:lang', retitle);
 
       card.appendChild(bar);
       card.appendChild(img);
@@ -140,8 +156,7 @@ fetch('/assets/coloring/manifest.json')
     });
   })
   .catch(function () {
-    document.getElementById('list').textContent =
-      'Не загрузился manifest.json — проверь, что сервер запущен.';
+    document.getElementById('list').textContent = I18N.t('print.nomanifest');
   });
 </script>
 </body>

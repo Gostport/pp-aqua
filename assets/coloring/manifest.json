@@ -38,8 +38,18 @@
    "id": 1,
    "name": "clownfish",
    "title": "Рыба-клоун",
+   "titles": {
+    "ru": "Рыба-клоун",
+    "en": "Clownfish",
+    "pl": "Błazenek"
+   },
    "model": "/assets/models/pack/clownfish/clownfish.gltf",
    "svg": "assets/coloring/clownfish.svg",
+   "sheets": {
+    "ru": "assets/coloring/clownfish.svg",
+    "en": "assets/coloring/clownfish.en.svg",
+    "pl": "assets/coloring/clownfish.pl.svg"
+   },
    "length": 1.5,
    "markers": {
     "tl": [
@@ -521,8 +531,18 @@
    "id": 2,
    "name": "bluetang",
    "title": "Голубой хирург",
+   "titles": {
+    "ru": "Голубой хирург",
+    "en": "Blue tang",
+    "pl": "Chirurg niebieski"
+   },
    "model": "/assets/models/pack/bluetang/bluetang.gltf",
    "svg": "assets/coloring/bluetang.svg",
+   "sheets": {
+    "ru": "assets/coloring/bluetang.svg",
+    "en": "assets/coloring/bluetang.en.svg",
+    "pl": "assets/coloring/bluetang.pl.svg"
+   },
    "length": 1.9,
    "markers": {
     "tl": [
@@ -900,8 +920,18 @@
    "id": 3,
    "name": "chelmonrostratus",
    "title": "Рыба-пинцет",
+   "titles": {
+    "ru": "Рыба-пинцет",
+    "en": "Copperband butterflyfish",
+    "pl": "Chelmon"
+   },
    "model": "/assets/models/pack/chelmonrostratus/chelmonrostratus.gltf",
    "svg": "assets/coloring/chelmonrostratus.svg",
+   "sheets": {
+    "ru": "assets/coloring/chelmonrostratus.svg",
+    "en": "assets/coloring/chelmonrostratus.en.svg",
+    "pl": "assets/coloring/chelmonrostratus.pl.svg"
+   },
    "length": 1.7,
    "markers": {
     "tl": [
@@ -1443,8 +1473,18 @@
    "id": 4,
    "name": "clowntriggerfish",
    "title": "Спинорог",
+   "titles": {
+    "ru": "Спинорог",
+    "en": "Clown triggerfish",
+    "pl": "Rogatnica klaun"
+   },
    "model": "/assets/models/pack/clowntriggerfish/clowntriggerfish.gltf",
    "svg": "assets/coloring/clowntriggerfish.svg",
+   "sheets": {
+    "ru": "assets/coloring/clowntriggerfish.svg",
+    "en": "assets/coloring/clowntriggerfish.en.svg",
+    "pl": "assets/coloring/clowntriggerfish.pl.svg"
+   },
    "length": 2.1,
    "markers": {
     "tl": [
@@ -1846,8 +1886,18 @@
    "id": 5,
    "name": "frenchangelfish",
    "title": "Французский ангел",
+   "titles": {
+    "ru": "Французский ангел",
+    "en": "French angelfish",
+    "pl": "Pomakant francuski"
+   },
    "model": "/assets/models/pack/frenchangelfish/frenchangelfish.gltf",
    "svg": "assets/coloring/frenchangelfish.svg",
+   "sheets": {
+    "ru": "assets/coloring/frenchangelfish.svg",
+    "en": "assets/coloring/frenchangelfish.en.svg",
+    "pl": "assets/coloring/frenchangelfish.pl.svg"
+   },
    "length": 2.4,
    "markers": {
     "tl": [
@@ -2381,8 +2431,18 @@
    "id": 6,
    "name": "fusilierfish",
    "title": "Цезио",
+   "titles": {
+    "ru": "Цезио",
+    "en": "Fusilier",
+    "pl": "Cezjo"
+   },
    "model": "/assets/models/pack/fusilierfish/fusilierfish.gltf",
    "svg": "assets/coloring/fusilierfish.svg",
+   "sheets": {
+    "ru": "assets/coloring/fusilierfish.svg",
+    "en": "assets/coloring/fusilierfish.en.svg",
+    "pl": "assets/coloring/fusilierfish.pl.svg"
+   },
    "length": 1.6,
    "markers": {
     "tl": [
@@ -2752,8 +2812,18 @@
    "id": 7,
    "name": "blackspottedsweetlips",
    "title": "Ворчун",
+   "titles": {
+    "ru": "Ворчун",
+    "en": "Sweetlips",
+    "pl": "Chrząkiew"
+   },
    "model": "/assets/models/pack/blackspottedsweetlips/blackspottedsweetlips.gltf",
    "svg": "assets/coloring/blackspottedsweetlips.svg",
+   "sheets": {
+    "ru": "assets/coloring/blackspottedsweetlips.svg",
+    "en": "assets/coloring/blackspottedsweetlips.en.svg",
+    "pl": "assets/coloring/blackspottedsweetlips.pl.svg"
+   },
    "length": 2.3,
    "markers": {
     "tl": [
@@ -3143,8 +3213,18 @@
    "id": 8,
    "name": "coralgrouper",
    "title": "Групер",
+   "titles": {
+    "ru": "Групер",
+    "en": "Coral grouper",
+    "pl": "Strzępiel koralowy"
+   },
    "model": "/assets/models/pack/coralgrouper/coralgrouper.gltf",
    "svg": "assets/coloring/coralgrouper.svg",
+   "sheets": {
+    "ru": "assets/coloring/coralgrouper.svg",
+    "en": "assets/coloring/coralgrouper.en.svg",
+    "pl": "assets/coloring/coralgrouper.pl.svg"
+   },
    "length": 2.6,
    "markers": {
     "tl": [
@@ -3534,8 +3614,18 @@
    "id": 9,
    "name": "browntang",
    "title": "Бурый хирург",
+   "titles": {
+    "ru": "Бурый хирург",
+    "en": "Brown tang",
+    "pl": "Chirurg brązowy"
+   },
    "model": "/assets/models/pack/browntang/browntang.gltf",
    "svg": "assets/coloring/browntang.svg",
+   "sheets": {
+    "ru": "assets/coloring/browntang.svg",
+    "en": "assets/coloring/browntang.en.svg",
+    "pl": "assets/coloring/browntang.pl.svg"
+   },
    "length": 1.8,
    "markers": {
     "tl": [
@@ -3957,8 +4047,18 @@
    "id": 10,
    "name": "bicolorangelfish",
    "title": "Двухцветный ангел",
+   "titles": {
+    "ru": "Двухцветный ангел",
+    "en": "Bicolor angelfish",
+    "pl": "Pomakant dwubarwny"
+   },
    "model": "/assets/models/pack/bicolorangelfish/bicolorangelfish.gltf",
    "svg": "assets/coloring/bicolorangelfish.svg",
+   "sheets": {
+    "ru": "assets/coloring/bicolorangelfish.svg",
+    "en": "assets/coloring/bicolorangelfish.en.svg",
+    "pl": "assets/coloring/bicolorangelfish.pl.svg"
+   },
    "length": 1.7,
    "markers": {
     "tl": [
@@ -4376,8 +4476,18 @@
    "id": 11,
    "name": "bluecheekbutterflyfish",
    "title": "Рыба-бабочка",
+   "titles": {
+    "ru": "Рыба-бабочка",
+    "en": "Butterflyfish",
+    "pl": "Motylek"
+   },
    "model": "/assets/models/pack/bluecheekbutterflyfish/bluecheekbutterflyfish.gltf",
    "svg": "assets/coloring/bluecheekbutterflyfish.svg",
+   "sheets": {
+    "ru": "assets/coloring/bluecheekbutterflyfish.svg",
+    "en": "assets/coloring/bluecheekbutterflyfish.en.svg",
+    "pl": "assets/coloring/bluecheekbutterflyfish.pl.svg"
+   },
    "length": 1.5,
    "markers": {
     "tl": [
@@ -4819,8 +4929,18 @@
    "id": 12,
    "name": "discus1",
    "title": "Дискус",
+   "titles": {
+    "ru": "Дискус",
+    "en": "Discus",
+    "pl": "Paletka"
+   },
    "model": "/assets/models/pack/discus1/discus1.gltf",
    "svg": "assets/coloring/discus1.svg",
+   "sheets": {
+    "ru": "assets/coloring/discus1.svg",
+    "en": "assets/coloring/discus1.en.svg",
+    "pl": "assets/coloring/discus1.pl.svg"
+   },
    "length": 1.8,
    "markers": {
     "tl": [
