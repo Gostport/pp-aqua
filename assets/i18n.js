@@ -170,10 +170,6 @@
 
       'tank.loading': 'Наполняю аквариум…',
       'tank.nofish': 'рыбок пока нет',
-      // Телефон — почти всегда камера, а не экран: спрашиваем до загрузки сцены.
-      'tank.phone.title': 'Ты зашёл с телефона',
-      'tank.phone.watch': 'Смотреть аквариум',
-      'tank.phone.watch.sub': 'рыбки поплывут здесь — но лучше на большом экране',
       'tank.notank': 'Аквариум не найден — возможно, его удалили или в коде опечатка.',
       'tank.tolist': 'К моим аквариумам →',
       'tank.noserver': 'Сервер недоступен. Запусти <code>node server.js</code> и обнови страницу.',
@@ -412,9 +408,6 @@
 
       'tank.loading': 'Filling the aquarium…',
       'tank.nofish': 'no fish yet',
-      'tank.phone.title': 'You are here from a phone',
-      'tank.phone.watch': 'Watch the aquarium',
-      'tank.phone.watch.sub': 'the fish will swim right here — a big screen is better though',
       'tank.notank': 'Aquarium not found — it may have been deleted, or the code has a typo.',
       'tank.tolist': 'To my aquariums →',
       'tank.noserver': 'The server is unreachable. Run <code>node server.js</code> and refresh the page.',
@@ -649,9 +642,6 @@
 
       'tank.loading': 'Napełniam akwarium…',
       'tank.nofish': 'jeszcze bez rybek',
-      'tank.phone.title': 'Jesteś tu z telefonu',
-      'tank.phone.watch': 'Oglądaj akwarium',
-      'tank.phone.watch.sub': 'rybki popłyną tutaj — ale duży ekran jest lepszy',
       'tank.notank': 'Nie znaleziono akwarium — mogło zostać usunięte albo w kodzie jest literówka.',
       'tank.tolist': 'Do moich akwariów →',
       'tank.noserver': 'Serwer niedostępny. Uruchom <code>node server.js</code> i odśwież stronę.',

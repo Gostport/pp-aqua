@@ -322,23 +322,6 @@
 
 <div class="taphint" id="taphint" data-t="menu.hint" hidden></div>
 
-<!-- Телефон — почти всегда камера, а не витрина: тяжёлую сцену не грузим,
-     пока человек не сказал, что пришёл именно смотреть. -->
-<div class="menu phonepick" id="phonepick" hidden>
-  <div class="card">
-    <h2 data-t="tank.phone.title"></h2>
-    <p class="who" id="pp-name"></p>
-    <button class="item main" id="pp-shoot" type="button">
-      <span class="ico">📷</span>
-      <span><b data-t="menu.capture.title"></b><i data-t="menu.capture.sub"></i></span>
-    </button>
-    <button class="item" id="pp-watch" type="button">
-      <span class="ico">👀</span>
-      <span><b data-t="tank.phone.watch"></b><i data-t="tank.phone.watch.sub"></i></span>
-    </button>
-  </div>
-</div>
-
 <!-- Пути абсолютные: страница отдаётся и по /t/<id>, и по своему файловому
      адресу, относительные ссылки сломались бы на первом же. -->
 <script src="/vendor/three.min.js"></script>
@@ -1587,9 +1570,7 @@
 
   // Клик по сцене — переключатель. Внутри карточки у каждой кнопки своё дело,
   // а по затемнению вокруг неё меню закрывается.
-  var phonePick = document.getElementById('phonepick');
   document.addEventListener('click', function (e) {
-    if (!phonePick.hidden) return;   // выбор «снимать или смотреть» — не фон
     if (menuCard.contains(e.target) || inModal(e.target)) return;
     toggleMenu();
   });
@@ -1807,7 +1788,6 @@
   function applyName(name) {
     tankName = name;
     document.getElementById('m-name').textContent = name;
-    document.getElementById('pp-name').textContent = name;
     document.title = name;
   }
 
@@ -2033,28 +2013,6 @@
     }
   }
 
-  // Телефон — узкий экран с тачем — спрашиваем, зачем пришли, до загрузки
-  // сцены: она тянет все модели и на слабых телефонах живёт тяжело, а нужен
-  // там почти всегда не аквариум, а съёмка. Планшеты шире 700 px и попадают
-  // в «большие экраны» — на них сцена запускается сразу.
-  function startOrAsk() {
-    // Гость витрины пришёл смотреть — выбор «снимать или смотреть» не про него.
-    if (DEMO) return startScene();
-    var phone = matchMedia('(pointer: coarse)').matches
-             && matchMedia('(max-width: 700px)').matches;
-    if (!phone) return startScene();
-    document.getElementById('loading').hidden = true;
-    phonePick.hidden = false;
-    document.getElementById('pp-shoot').onclick = function () {
-      location.href = Tank.url + '/capture';
-    };
-    document.getElementById('pp-watch').onclick = function () {
-      phonePick.hidden = true;
-      document.getElementById('loading').hidden = false;
-      startScene();
-    };
-  }
-
   // Сначала убеждаемся, что аквариум вообще есть. Иначе сцена соберётся,
   // все запросы вернут 404, и человек будет смотреть в чёрный экран,
   // не понимая, что ссылка устарела или в коде опечатка.
@@ -2074,7 +2032,7 @@
       if (meta.locked && !Tank.pass()) {
         document.querySelector('#m-fish i').textContent = I18N.t('menu.fish.sub.pass');
       }
-      startOrAsk();
+      startScene();
     });
   }).catch(function () {
     fail(I18N.t('tank.noserver'));
