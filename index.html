@@ -419,6 +419,19 @@
   // в списке своих.
   var demoAsked = false;
   var howTouched = false;
+  var HOW_KEY = 'aqua.howOpen';
+
+  // Свернул или развернул руками — запоминаем, чтобы инструкция не
+  // раскрывалась заново на каждой загрузке. Слушаем клик, а не toggle:
+  // toggle приходит и от программного открытия, и запомнил бы его тоже.
+  // Клик срабатывает до переключения, поэтому состояние читаем тактом позже.
+  document.querySelector('#how summary').addEventListener('click', function () {
+    var how = document.getElementById('how');
+    setTimeout(function () {
+      try { localStorage.setItem(HOW_KEY, how.open ? '1' : '0'); } catch (e) { /* приватный режим */ }
+    }, 0);
+  });
+
   function askDemo() {
     if (demoAsked) return;
     demoAsked = true;
@@ -457,11 +470,14 @@
     empty.hidden = ids.length > 0;
 
     // Инструкция раскрыта только новичку — у кого есть свой аквариум, тот
-    // дорогу знает. Ставим один раз: перерисовка (смена языка, удаление)
-    // не должна захлопывать разворот, открытый руками.
+    // дорогу знает. Ручной выбор сильнее умолчания и переживает перезагрузку.
+    // Ставим один раз: перерисовка (смена языка, удаление) не должна
+    // захлопывать разворот, открытый руками.
     if (!howTouched) {
       howTouched = true;
-      document.getElementById('how').open = ids.length === 0;
+      var saved = null;
+      try { saved = localStorage.getItem(HOW_KEY); } catch (e) { /* приватный режим */ }
+      document.getElementById('how').open = saved !== null ? saved === '1' : ids.length === 0;
     }
     askDemo();
 
