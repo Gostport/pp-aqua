@@ -100,6 +100,21 @@
     text-align: left;
   }
   .hintline { color: var(--muted); font-size: 13px; margin-top: 22px; }
+
+  /* Мост на телефон для больших экранов: выбор файла на компьютере — тупик,
+     а камера всегда в кармане. Белая подложка обязательна: без неё сканер
+     не видит код на тёмном. */
+  .qrrow {
+    display: flex; align-items: center; gap: 14px; text-align: left;
+    margin: 26px auto 0; max-width: 400px;
+    border-top: 1px solid rgba(140, 200, 255, 0.18); padding-top: 20px;
+  }
+  .qrrow .qrbox {
+    flex: none; line-height: 0;
+    background: #fff; border-radius: 10px; padding: 7px;
+  }
+  .qrrow .qrbox svg { display: block; width: 96px; height: 96px; }
+  .qrrow .qrtext { color: var(--muted); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -115,6 +130,10 @@
   <label class="big" for="file" data-t="cap.shoot"></label>
   <input type="file" id="file" accept="image/*" capture="environment">
   <p class="hintline" data-t="cap.hint"></p>
+  <div class="qrrow" id="qrrow" hidden>
+    <span class="qrbox" id="cap-qr"></span>
+    <span class="qrtext" data-t="cap.qr"></span>
+  </div>
 </div>
 
 <!-- обработка -->
@@ -148,6 +167,7 @@
 </div>
 
 <script src="/assets/i18n.js"></script>
+<script src="/vendor/qr.js"></script>
 <script src="/vendor/three.min.js"></script>
 <script src="/vendor/GLTFLoader.js"></script>
 <!-- до fish-glb.js: он спрашивает у FishFrame оси и голову, иначе половина
@@ -169,6 +189,19 @@
   // Страница открыта внутри меню аквариума — убираем всё, что там повторяется.
   var EMBED = new URLSearchParams(location.search).has('embed');
   if (EMBED) document.body.classList.add('embed');
+
+  // На устройстве без тача «Сфотографировать лист» открывает выбор файла —
+  // тупик: камера у человека в кармане. Показываем мост: QR прямо на эту
+  // страницу, телефон наводится и снимает там.
+  if (!matchMedia('(pointer: coarse)').matches && window.qrcode) {
+    try {
+      var qr = qrcode(0, 'M');
+      qr.addData(location.origin + Tank.url + '/capture');
+      qr.make();
+      document.getElementById('cap-qr').innerHTML = qr.createSvgTag(4, 0);
+      document.getElementById('qrrow').hidden = false;
+    } catch (e) { /* без QR кнопка выбора файла всё равно работает */ }
+  }
 
   var inFrame = EMBED && window.parent !== window;
 

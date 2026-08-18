@@ -65,7 +65,8 @@
     font-size: 12px; color: var(--dim);
   }
   .hsteps .ico { font-size: 24px; line-height: 1; }
-  .how .need { margin: 0 0 14px; color: var(--muted); font-size: 13.5px; }
+  .how .need { margin: 0 0 16px; color: var(--muted); font-size: 13.5px; }
+  .how .demo { max-width: 340px; }
   h1 { margin: 0 0 12px; font-size: clamp(30px, 5vw, 48px); line-height: 1.05; font-weight: 650; letter-spacing: -0.5px; }
   header p { margin: 0; color: var(--muted); font-size: 16.5px; max-width: 620px; }
 
@@ -124,7 +125,7 @@
   .tank:hover .kill, .tank .kill:focus-visible { opacity: 1 }
   .tank .kill:hover { background: #4a1d24; color: #ff9aa6; border-color: #7a2b36 }
 
-  /* Кнопки-«таблетки»: «Открыть» у поля кода и демо-аквариум в шагах. */
+  /* Кнопка-«таблетка» — «Открыть» у поля ввода кода. */
   .btn {
     appearance: none; cursor: pointer; font: inherit; font-size: 13.5px;
     text-align: center; text-decoration: none; display: inline-block;
@@ -205,7 +206,15 @@
       <li><span class="ico">📺</span><span data-t="home.how.s4"></span></li>
     </ol>
     <p class="need" data-t="home.how.need"></p>
-    <a class="btn demo" id="demo" data-t="home.how.demo" hidden></a>
+    <!-- Витрина — карточка с живым кадром, а не таблетка: это главный путь
+         новичка к «вау», и бледной кнопкой он терялся даже рядом с пустым «+». -->
+    <a class="tank demo" id="demo" hidden>
+      <div class="shot"><div class="veil"></div></div>
+      <div class="body">
+        <h2 data-t="home.how.demo"></h2>
+        <div class="meta" data-t="home.how.demo.sub"></div>
+      </div>
+    </a>
   </div>
 
   <div class="empty" id="empty" data-t="home.empty" hidden></div>
@@ -399,9 +408,27 @@
         if (!d || !Tank.isValidId(d.id)) return;
         var a = document.getElementById('demo');
         a.href = '/t/' + d.id + '?demo';
-        a.hidden = false;
+        // Кадр витрины — как у карточек аквариумов: снимок сцены,
+        // а пока его нет — хотя бы фон.
+        return fetch('/api/t/' + d.id + '/meta')
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .catch(function () { return null; })
+          .then(function (meta) {
+            var pic = meta && (meta.preview || meta.backgroundUrl);
+            if (pic) {
+              var img = document.createElement('img');
+              img.className = 'fade';
+              img.alt = '';
+              img.loading = 'lazy';
+              img.onload = function () { img.classList.add('on'); };
+              img.src = pic;
+              var shot = a.querySelector('.shot');
+              shot.insertBefore(img, shot.firstChild);
+            }
+            a.hidden = false;
+          });
       })
-      .catch(function () { /* демо не настроено — блок живёт без кнопки */ });
+      .catch(function () { /* демо не настроено — блок живёт без карточки */ });
   }
 
   function render() {
