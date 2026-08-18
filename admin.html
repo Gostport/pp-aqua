@@ -251,10 +251,17 @@
 
   // Высота у страницы гуляет — от одной строки замка до сетки с рыбками.
   // Врезка не тянется сама, поэтому свой рост она сообщает наружу.
+  // Открытое окно подтверждения бывает выше содержимого страницы — тогда
+  // врезке нужна его высота, иначе окно срежется по краям.
+  function frameHeight() {
+    return Math.max(document.body.scrollHeight,
+      (window.Modal && Modal.height && Modal.height()) || 0);
+  }
+
   if (inFrame) {
     var tellHeight = function () {
       try {
-        window.parent.postMessage({ aqua: 'height', height: document.body.scrollHeight }, location.origin);
+        window.parent.postMessage({ aqua: 'height', height: frameHeight() }, location.origin);
       } catch (e) { /* не критично */ }
     };
     if (window.ResizeObserver) new ResizeObserver(tellHeight).observe(document.body);

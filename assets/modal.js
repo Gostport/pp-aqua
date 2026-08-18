@@ -76,12 +76,26 @@
   // ограничено высотой самой врезки: одна рыбка в списке — рамка в три сотни
   // пикселей, а окно удаления с картинкой выше. Пока окно открыто, просим
   // родителя подрасти; закрыв — возвращаем высоту содержимого.
+  //
+  // Высоту врезке сообщает и сама страница — по своему содержимому и по
+  // таймеру. Чтобы её сообщение не сжало врезку обратно и не срезало
+  // открытое окно, страницы берут максимум со своей высотой: Modal.height().
   var inFrame = window.parent !== window;
+  var openBoxes = [];
 
-  function tellHeight(px) {
+  function neededHeight() {
+    var h = 0;
+    openBoxes.forEach(function (b) { h = Math.max(h, b.offsetHeight + 24); });
+    return h;
+  }
+
+  function tellHeight() {
     if (!inFrame) return;
     try {
-      window.parent.postMessage({ aqua: 'height', height: px }, location.origin);
+      window.parent.postMessage({
+        aqua: 'height',
+        height: Math.max(document.body.scrollHeight, neededHeight())
+      }, location.origin);
     } catch (e) { /* не критично */ }
   }
 
@@ -191,11 +205,10 @@
       if (input) { input.focus(); input.select(); }
       else if (buttons[focusIndex]) buttons[focusIndex].focus();
 
-      tellHeight(Math.max(document.body.scrollHeight, box.offsetHeight + 24));
+      openBoxes.push(box);
+      tellHeight();
       // Картинка приезжает позже разметки и меняет высоту окна.
-      if (img) img.addEventListener('load', function () {
-        tellHeight(Math.max(document.body.scrollHeight, box.offsetHeight + 24));
-      });
+      if (img) img.addEventListener('load', tellHeight);
 
       function value() {
         if (!input) return true;
@@ -205,8 +218,10 @@
       function close(v) {
         document.removeEventListener('keydown', onKey, true);
         back.remove();
+        var i = openBoxes.indexOf(box);
+        if (i !== -1) openBoxes.splice(i, 1);
         if (before && before.focus) before.focus();
-        tellHeight(document.body.scrollHeight);
+        tellHeight();
         resolve(v === true && input ? value() : v);
       }
 
@@ -238,6 +253,9 @@
   }
 
   window.Modal = {
+    // Сколько места просит открытое сейчас окно (0, если окон нет).
+    // Нужно страницам, которые сами сообщают свою высоту врезке.
+    height: neededHeight,
     confirm: function (o) {
       o = o || {};
       return open({

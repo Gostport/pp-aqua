@@ -182,7 +182,14 @@
 
   // Экраны съёмки разной высоты — от кнопки до превью с 3D. Врезка не умеет
   // подстраиваться сама, поэтому свою высоту она сообщает наружу.
-  function tellHeight() { tell({ aqua: 'height', height: document.body.scrollHeight }); }
+  // Открытое окно подтверждения бывает выше содержимого страницы — тогда
+  // врезке нужна его высота, иначе окно срежется по краям.
+  function frameHeight() {
+    return Math.max(document.body.scrollHeight,
+      (window.Modal && Modal.height && Modal.height()) || 0);
+  }
+
+  function tellHeight() { tell({ aqua: 'height', height: frameHeight() }); }
 
   if (inFrame) {
     if (window.ResizeObserver) new ResizeObserver(tellHeight).observe(document.body);

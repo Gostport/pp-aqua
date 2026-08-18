@@ -87,10 +87,17 @@
 var EMBED = new URLSearchParams(location.search).has('embed');
 if (EMBED) document.body.classList.add('embed');
 
+// Открытое окно подтверждения бывает выше содержимого страницы — тогда
+// врезке нужна его высота, иначе окно срежется по краям.
+function frameHeight() {
+  return Math.max(document.body.scrollHeight,
+    (window.Modal && Modal.height && Modal.height()) || 0);
+}
+
 if (EMBED && window.parent !== window) {
   var tellHeight = function () {
     try {
-      window.parent.postMessage({ aqua: 'height', height: document.body.scrollHeight }, location.origin);
+      window.parent.postMessage({ aqua: 'height', height: frameHeight() }, location.origin);
     } catch (e) { /* не критично */ }
   };
   if (window.ResizeObserver) new ResizeObserver(tellHeight).observe(document.body);
