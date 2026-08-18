@@ -132,6 +132,12 @@
     background: var(--card); border: 1px solid var(--line); border-radius: 16px;
     padding: 16px 18px;
   }
+  /* На узком экране карточка съезжает под заголовок и стоит одна на строке:
+     330 px посреди пустой ширины выглядят обрезком, поэтому там она
+     растягивается во всю полосу — как карточки аквариумов под ней. */
+  @media (max-width: 760px) {
+    .bycode { flex-basis: 100%; }
+  }
   .langrow { display: flex; justify-content: flex-end; margin: -4px 0 6px; }
   .langpick { display: inline-flex; gap: 4px; }
   .langpick button {
