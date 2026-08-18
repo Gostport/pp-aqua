@@ -92,13 +92,14 @@ node server.js          # http://localhost:8000
 
 ## Деплой
 
-Всё для VPS лежит рядом: `Dockerfile`, `docker-compose.yml` (аквариум +
-Caddy с автоматическим HTTPS), `Caddyfile`, `.env.example`. Порядок,
-бэкапы и разбор частых поломок — в [DEPLOY.md](DEPLOY.md).
+Всё для сервера лежит рядом: `Dockerfile`, `docker-compose.prod.yml`
+и `.env.example`. Аквариум — один контейнер без своего прокси: HTTPS,
+домен и сертификат берёт на себя Traefik через внешнюю сеть `web`.
+Порядок, бэкапы и разбор частых поломок — в [DEPLOY.md](DEPLOY.md).
 
 ```bash
-cp .env.example .env      # домен и почта
-docker compose up -d --build
+cp .env.example .env      # DOMAIN
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 ```
 
 Пак моделей в образ не попадает — он монтируется томом с сервера.
@@ -247,8 +248,9 @@ System.Drawing). Любые свои `.glb`/`.gltf` кладутся в `assets/
 
 Для публичного сервера рядом лежит страница [«Правила и данные»](terms.html)
 (`/terms.html`): что хранится, сколько живёт, как удалить, права по GDPR
-и контакт. Журнал обращений Caddy намеренно выключен — IP-адреса тех, кто
-смотрит детские рисунки, никому не нужны.
+и контакт. Сам сервер журнала обращений не ведёт — IP-адреса тех, кто
+смотрит детские рисунки, никому не нужны; проверь заодно, что их не пишет
+прокси (см. «Журнал обращений» в [DEPLOY.md](DEPLOY.md)).
 
 ## Лицензия
 
