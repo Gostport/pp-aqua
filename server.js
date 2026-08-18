@@ -230,6 +230,63 @@ function tankEvents(id) {
   return events.get(id);
 }
 
+// ── пин для телевизора ─────────────────────────────────────────────────────
+// Пять цифр вместо кода из десяти знаков: их набирают пультом за секунды.
+// Пин живёт в памяти и умирает через пять минут — переживать перезапуск
+// ему незачем. Даёт ровно то же, что и код (смотреть, добавить рыбку),
+// поэтому даже угаданный пин не открывает ничего сверх ссылки, которую
+// и так раздают. Управление как было под паролем, так и осталось.
+const PIN_TTL = 5 * 60 * 1000;
+const PIN_MAX = 500;          // потолок живых пинов: пул всего из 90 000 цифр
+const PIN_PER_HOUR = 30;      // новых пинов с одного адреса в час
+const pins = new Map();       // пин → { id, expires }
+const newPins = new Map();    // адрес → времена выдач
+const pinMiss = new Map();    // адрес → { fails, blockUntil } — душит перебор
+
+function sweepPins() {
+  const now = Date.now();
+  for (const [pin, v] of pins) if (v.expires <= now) pins.delete(pin);
+}
+
+function allowNewPin(key) {
+  const hour = 60 * 60 * 1000;
+  const now = Date.now();
+  const fresh = (newPins.get(key) || []).filter((t) => now - t < hour);
+  if (fresh.length >= PIN_PER_HOUR) { newPins.set(key, fresh); return false; }
+  fresh.push(now);
+  newPins.set(key, fresh);
+  if (newPins.size > 5000) newPins.clear();
+  return true;
+}
+
+function makePin(id) {
+  sweepPins();
+  // Один живой пин на аквариум: повторное нажатие показывает те же цифры,
+  // а не съедает новую комбинацию из небольшого пула.
+  for (const [pin, v] of pins) {
+    if (v.id === id) return { pin, ttl: v.expires - Date.now() };
+  }
+  if (pins.size >= PIN_MAX) return null;
+  for (let i = 0; i < 50; i++) {
+    const pin = String(crypto.randomInt(10000, 100000));   // без ведущего нуля
+    if (!pins.has(pin)) {
+      pins.set(pin, { id, expires: Date.now() + PIN_TTL });
+      return { pin, ttl: PIN_TTL };
+    }
+  }
+  return null;
+}
+
+function pinMissFor(key) {
+  let ev = pinMiss.get(key);
+  if (!ev) {
+    if (pinMiss.size > 5000) pinMiss.clear();
+    ev = { fails: 0, blockUntil: 0 };
+    pinMiss.set(key, ev);
+  }
+  return ev;
+}
+
 // ── пароль аквариума ───────────────────────────────────────────────────────
 // Два уровня доступа. Ссылка (она же код из 10 знаков) даёт смотреть: её
 // отправляют ребёнку, бабушке, вешают на телевизор. Пароль даёт управлять:
@@ -708,6 +765,18 @@ function handleTankApi(req, res, t, url) {
     return send(res, 200, JSON.stringify({ ok: true, feedAt: ev.feedAt }));
   }
 
+  // Пин для телевизора. Без пароля: он не даёт ничего сверх самого кода,
+  // а выдачу с одного адреса ограничивает allowNewPin.
+  if (req.method === 'POST' && url === '/pin') {
+    if (!fs.existsSync(t.meta)) return send(res, 404, '{"error":"нет такого аквариума"}');
+    if (!allowNewPin(clientKey(req))) {
+      return send(res, 429, '{"error":"слишком часто; подожди немного"}');
+    }
+    const p = makePin(t.id);
+    if (!p) return send(res, 503, '{"error":"свободных кодов нет — попробуй позже"}');
+    return send(res, 200, JSON.stringify({ pin: p.pin, ttl: Math.ceil(p.ttl / 1000) }));
+  }
+
   send(res, 404, '{"error":"unknown api"}');
 }
 
@@ -715,6 +784,24 @@ function handleApi(req, res, url) {
   // Пак один на все аквариумы, поэтому ручка общая.
   if (req.method === 'GET' && url === '/api/pack') {
     return send(res, 200, JSON.stringify(listPack()));
+  }
+
+  // Обмен пина на код аквариума. Перебор душится той же растущей паузой,
+  // что и пароль: комбинаций всего девяносто тысяч, без паузы их перебрали
+  // бы за вечер. Пауза по адресу: аквариум по пину ещё неизвестен.
+  const pm = url.match(/^\/api\/pin\/(\d{5})$/);
+  if (req.method === 'GET' && pm) {
+    const ev = pinMissFor(clientKey(req));
+    const wait = blockedFor(ev);
+    if (wait) {
+      return send(res, 429, JSON.stringify({ error: 'слишком много попыток', retryAfter: Math.ceil(wait / 1000) }));
+    }
+    sweepPins();
+    const hit = pins.get(pm[1]);
+    if (!hit) { noteFail(ev); return send(res, 404, '{"error":"нет такого кода"}'); }
+    ev.fails = 0;
+    ev.blockUntil = 0;
+    return send(res, 200, JSON.stringify({ id: hit.id }));
   }
 
   // Демо-аквариум для главной: код задаётся переменной AQUA_DEMO_TANK.

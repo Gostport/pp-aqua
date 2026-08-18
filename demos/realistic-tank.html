@@ -90,11 +90,18 @@
   .menu .share .qrwrap { display: grid; place-items: center; gap: 10px; margin: 14px 0 16px; }
   .menu .share .qrwrap .qrbox svg { width: 168px; height: 168px; }
   .menu .share .qrhint { margin: 0; font-size: 12px; color: var(--muted); text-align: center; }
-  .menu .share .tvline { margin: 12px 2px 2px; font-size: 12px; color: var(--muted); }
-  .menu .share .tvline b {
-    font: 12px/1 ui-monospace, Consolas, monospace;
-    letter-spacing: 1px; color: var(--accent);
+
+  /* Пин для телевизора: цифры крупные — их читают через комнату, с дивана. */
+  .menu .share .pinbox {
+    margin: 2px 0 10px; padding: 14px 16px 12px; text-align: center;
+    background: rgba(88, 214, 255, 0.07);
+    border: 1px solid var(--line); border-radius: 14px;
   }
+  .menu .share .pin {
+    font: 600 40px/1.1 ui-monospace, Consolas, monospace;
+    letter-spacing: 10px; text-indent: 10px; color: var(--accent);
+  }
+  .menu .share .pinhint { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
 
   .menu .item {
     display: flex; align-items: center; gap: 12px;
@@ -314,7 +321,14 @@
         <span class="ico">📨</span>
         <span><b data-t="menu.share.send"></b><i data-t="menu.share.send.sub"></i></span>
       </button>
-      <p class="tvline"><span data-t="menu.share.tv"></span> <b id="share-code"></b></p>
+      <button class="item" id="m-tvpin" type="button">
+        <span class="ico">📟</span>
+        <span><b data-t="menu.share.pin"></b><i data-t="menu.share.pin.sub"></i></span>
+      </button>
+      <div class="pinbox" id="pinbox" hidden>
+        <div class="pin" id="pin-digits"></div>
+        <p class="pinhint" data-t="menu.share.pin.text"></p>
+      </div>
     </div>
   </div>
 </div>
@@ -1687,8 +1701,31 @@
   function showShareView() {
     showView(menuShare, false);
     drawQr(document.getElementById('share-qr'), tankLink());
-    document.getElementById('share-code').textContent = Tank.id;
+    // Пин показываем свежим на каждое открытие: старый мог истечь, пока
+    // меню лежало закрытым. Сервер всё равно вернёт живой тот же самый.
+    document.getElementById('pinbox').hidden = true;
+    pinBtn.hidden = false;
+    pinBtn.querySelector('b').textContent = I18N.t('menu.share.pin');
   }
+
+  // Код для телевизора: пять цифр вместо десяти знаков — их набирают пультом.
+  // Выдаётся по нажатию, а не при открытии вида: пины из небольшого пула,
+  // и жечь их на каждое «посмотреть меню» не стоит.
+  var pinBtn = document.getElementById('m-tvpin');
+  pinBtn.onclick = function () {
+    pinBtn.disabled = true;
+    fetch(Tank.api + '/pin', { method: 'POST' })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(function (d) {
+        document.getElementById('pin-digits').textContent = d.pin;
+        document.getElementById('pinbox').hidden = false;
+        pinBtn.hidden = true;
+      })
+      .catch(function () {
+        pinBtn.querySelector('b').textContent = I18N.t('menu.share.pin.fail');
+      })
+      .then(function () { pinBtn.disabled = false; });
+  };
 
   var copyItem = document.getElementById('m-copylink');
   copyItem.onclick = function () {

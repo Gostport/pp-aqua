@@ -89,6 +89,11 @@ Capture and feeding are deliberately password-free: the child opens the link on
 a phone, and asking for a password there would kill the whole idea. Nothing can
 be spoiled that way — everything irreversible is behind the password.
 
+For a TV there is a shortcut: “Open on another screen” in the aquarium
+menu hands out a temporary five-digit code (lives 5 minutes, kept in the
+server's memory). It goes into the same field on the home page as the
+regular code; guessing is choked by a growing per-address pause.
+
 The code is long on purpose: 31¹⁰ ≈ 8·10¹⁴ combinations, so somebody else's
 drawings cannot be found by guessing. A five-digit code (100,000 combinations)
 would be brute-forced in minutes. The password is protected by a pause after

@@ -505,7 +505,25 @@
 
   document.getElementById('code-form').onsubmit = function (e) {
     e.preventDefault();
-    var v = document.getElementById('code').value.trim().toLowerCase();
+    var v = document.getElementById('code').value.trim().toLowerCase().replace(/\s+/g, '');
+
+    // Пять цифр — временный код с телефона («Код для телевизора»),
+    // десять знаков — постоянный код аквариума. Форматы не пересекаются,
+    // поэтому поле одно на оба.
+    if (/^\d{5}$/.test(v)) {
+      fetch('/api/pin/' + v)
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (d) { location.href = '/t/' + d.id; })
+        .catch(function (status) {
+          var many = status === 429;
+          Modal.alert({
+            title: I18N.t(many ? 'home.pin.many.title' : 'home.pin.bad.title'),
+            text: I18N.t(many ? 'home.pin.many.text' : 'home.pin.bad.text')
+          });
+        });
+      return;
+    }
+
     if (!Tank.isValidId(v)) {
       Modal.alert({
         title: I18N.t('home.badcode.title'),
