@@ -51,9 +51,16 @@ the model's orientation (where the nose is, where the back is) on its own, from
 the tail beats in the animation: `assets/fish-frame.js`.
 
 **The menu.** A tap anywhere in the aquarium opens the menu: capture, ready-made
-fish from the pack, food, colouring sheets, background, removing fish. Capture,
-background and sheets open right there in a frame — they are the same pages
-(`?embed=1`), not copies of them.
+fish from the pack, food, colouring sheets, background, removing fish and
+“Open on another screen” — a QR code, a link and a five-digit TV code.
+Capture, background and sheets open right there in a frame — they are the
+same pages (`?embed=1`), not copies of them.
+
+**The showcase.** The `AQUA_DEMO_TANK` variable turns one aquarium into
+a public showcase: the home page offers newcomers a “Peek at a live
+aquarium” card, and a `?demo` link opens it with a trimmed menu — feed the
+fish or start your own. A screen opened with a PIN (`?tv`) never pops the
+menu by itself: that screen is for watching, the phone is for driving.
 
 **Languages.** Russian, English and Polish; on the first visit the device
 language is used, after that whatever the switcher was set to. All strings live
