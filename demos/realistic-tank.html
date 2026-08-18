@@ -261,7 +261,7 @@
         <span class="ico">📺</span>
         <span><b data-t="menu.share.title"></b><i data-t="menu.share.sub"></i></span>
       </button>
-      <a class="item" href="/">
+      <a class="item" id="m-home" href="/">
         <span class="ico">🏠</span>
         <span><b data-t="menu.home.title"></b><i data-t="menu.home.sub"></i></span>
       </a>
@@ -1507,7 +1507,8 @@
   // «заведи свой» и дорога к списку. Имя и пароль витрины тоже не трогают.
   var DEMO = /(^|[?&])demo(=|&|$)/.test(location.search);
   if (DEMO) {
-    ['m-capture', 'm-pack', 'm-print', 'm-bg', 'm-fish', 'm-share']
+    // «Мои аквариумы» тоже прячем: он вёл туда же, куда «Завести свой».
+    ['m-capture', 'm-pack', 'm-print', 'm-bg', 'm-fish', 'm-share', 'm-home']
       .forEach(function (id) { document.getElementById(id).hidden = true; });
     document.getElementById('m-demo').hidden = false;
     document.getElementById('m-own').hidden = false;
