@@ -83,6 +83,15 @@
     color: var(--muted); font-size: 13px;
   }
 
+  /* «Ярче цвета»: светлый карандаш подкручивается прямо на превью,
+     до выпуска. Ползунок — единственная ручка, детям хватает одной. */
+  .boostrow {
+    display: flex; align-items: center; gap: 12px;
+    margin: 14px 2px 0; text-align: left;
+  }
+  .boostrow label { flex: none; color: var(--muted); font-size: 14px; }
+  .boostrow input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+
   .spin {
     width: 44px; height: 44px; margin: 30px auto 12px;
     border: 4px solid rgba(140, 200, 255, 0.2);
@@ -147,6 +156,10 @@
   <p class="fishname" id="p-name"></p>
   <div class="stage3d" id="stage3d"><div class="spin3d" id="spin3d" data-t="cap.reviving"></div></div>
   <img class="preview" id="p-img" data-t-alt="cap.photo" hidden>
+  <div class="boostrow">
+    <label for="boost" data-t="cap.boost"></label>
+    <input type="range" id="boost" min="0" max="100" value="0">
+  </div>
   <button class="big green" id="b-release" data-t="cap.release"></button>
   <label class="big ghost" for="file" data-t="cap.retake"></label>
 </div>
@@ -301,7 +314,7 @@
     });
   }
 
-  function show3D(kind, texURL) {
+  function show3D(kind) {
     var flat = document.getElementById('p-img');
     var spin = document.getElementById('spin3d');
     spin.style.display = '';
@@ -323,26 +336,23 @@
         if (P3.mesh.material.map) P3.mesh.material.map.dispose();
         P3.mesh.material.dispose();
       }
-      var img = new Image();
-      img.onload = function () {
-        var tex = new THREE.Texture(img);
-        tex.needsUpdate = true;
-        tex.encoding = THREE.sRGBEncoding;
-        var mat = new THREE.MeshStandardMaterial({
-          map: tex, roughness: 0.5, metalness: 0.05, side: THREE.DoubleSide
-        });
-        FishGLB.addBend(mat, {
-          bodyMask: new THREE.Vector3(0, 0, 1),
-          latMask: new THREE.Vector3(1, 0, 0),
-          range: geo.userData.range,
-          headAtMax: true
-        }, 0.4, Math.random() * 6.28);
-        P3.mesh = new THREE.Mesh(geo, mat);
-        P3.scene.add(P3.mesh);
-        spin.style.display = 'none';
-        startLoop();
-      };
-      img.src = texURL;
+      // Текстура прямо из канваса, а не через dataURL: ползунок «Ярче цвета»
+      // перерисовывает канвас, и рыбке хватает needsUpdate — без PNG.
+      var tex = new THREE.CanvasTexture(result.boost.texCanvas);
+      tex.encoding = THREE.sRGBEncoding;
+      var mat = new THREE.MeshStandardMaterial({
+        map: tex, roughness: 0.5, metalness: 0.05, side: THREE.DoubleSide
+      });
+      FishGLB.addBend(mat, {
+        bodyMask: new THREE.Vector3(0, 0, 1),
+        latMask: new THREE.Vector3(1, 0, 0),
+        range: geo.userData.range,
+        headAtMax: true
+      }, 0.4, Math.random() * 6.28);
+      P3.mesh = new THREE.Mesh(geo, mat);
+      P3.scene.add(P3.mesh);
+      spin.style.display = 'none';
+      startLoop();
     });
   }
 
@@ -405,8 +415,10 @@
       result = r;
       document.getElementById('p-name').textContent =
         I18N.t('cap.itis', { name: (r.titles && (r.titles[I18N.lang] || r.titles.ru)) || r.title });
+      // ползунок стартует с авто-положения: бледный рисунок уже подкручен
+      document.getElementById('boost').value = Math.round(r.boost.auto * 100);
       show('s-preview');
-      show3D(r.kind, r.texture);
+      show3D(r.kind);
       return r;
     }, function (err) {
       document.getElementById('err-text').textContent = String(err.message || err);
@@ -414,6 +426,28 @@
       throw err;
     });
   };
+
+  // Живая подстройка: пиксели пересчитываются из сырой копии, 3D-текстура
+  // обновляется через needsUpdate. Во время протяжки события схлопывает
+  // rAF-затвор, но rAF — только оптимизация: в перекрытой вкладке Chrome
+  // его замораживает, поэтому отпускание ползунка ('change') и отправка
+  // применяют значение синхронно, иначе рыбка уплывёт неподкрученной.
+  var boostEl = document.getElementById('boost');
+  var boostQueued = false;
+  function applyBoost() {
+    boostQueued = false;
+    if (!result || !result.boost) return;
+    var v = boostEl.value / 100;
+    if (result.boost.value === v) return;
+    result.boost.set(v);
+    if (P3.mesh && P3.mesh.material.map) P3.mesh.material.map.needsUpdate = true;
+    var flat = document.getElementById('p-img');
+    if (!flat.hidden) flat.src = result.boost.pvCanvas.toDataURL('image/png');
+  }
+  boostEl.addEventListener('input', function () {
+    if (!boostQueued) { boostQueued = true; requestAnimationFrame(applyBoost); }
+  });
+  boostEl.addEventListener('change', applyBoost);
 
   document.getElementById('file').addEventListener('change', function () {
     var file = this.files && this.files[0];
@@ -428,12 +462,18 @@
 
   window.releaseFish = function () {         // отдельно — для автотестов
     if (!result) return Promise.reject(new Error(I18N.t('cap.err.nofish')));
+    applyBoost();   // страховка: rAF мог не успеть — уходит то, что на ползунке
     document.getElementById('busy-text').textContent = I18N.t('cap.sending');
     show('s-busy');
     return fetch(Tank.api + '/fish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind: result.kind, texture: result.texture })
+      // текстура запекается с текущим положением ползунка — в аквариум
+      // уплывает то, что человек видел на превью
+      body: JSON.stringify({
+        kind: result.kind,
+        texture: result.boost ? result.boost.bake().texture : result.texture
+      })
     }).then(function (r) {
       if (!r.ok) throw new Error(I18N.t('cap.err.status', { code: r.status }));
       return r.json();

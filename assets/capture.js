@@ -3,7 +3,8 @@
    белого. Чистый JS без зависимостей — работает на телефоне в браузере.
 
    API: FishCapture.processPhoto(source, manifest) → Promise<{
-     kind, title, texture (dataURL png), preview (dataURL png)
+     kind, title, texture (dataURL png), preview (dataURL png),
+     boost (ползунок «Ярче цвета»: auto, value, set(v), texCanvas, pvCanvas, bake())
    }> либо reject(Error) с понятным сообщением. */
 (function () {
   'use strict';
@@ -379,35 +380,99 @@
       }
       tctx.putImageData(img, 0, 0);
 
+      // ── «Ярче цвета» ──
+      // Светлый карандаш на рыбке почти не виден. Голая яркость не лечит:
+      // темнеет и бумага между штрихами, рисунок серее, а не сочнее. Поэтому
+      // усиливаем «чернила» (255−c растягивается — белая бумага на месте)
+      // и следом насыщенность вокруг собственной яркости пикселя.
+      // Сырые пиксели держим отдельно: ползунок всегда крутит оригинал,
+      // а не результат прошлого положения.
+      var raw = new Uint8ClampedArray(d);
+
+      function boostPixels(v) {
+        if (v <= 0) { d.set(raw); return; }
+        var g = 1 + v * 1.6;
+        var s = 1 + v * 1.4;
+        for (var bi = 0; bi < N; bi++) {
+          var o2 = bi * 4;
+          var r = 255 - (255 - raw[o2]) * g;
+          var gr = 255 - (255 - raw[o2 + 1]) * g;
+          var b = 255 - (255 - raw[o2 + 2]) * g;
+          if (r < 0) r = 0;
+          if (gr < 0) gr = 0;
+          if (b < 0) b = 0;
+          var l = r * 0.299 + gr * 0.587 + b * 0.114;
+          d[o2] = l + (r - l) * s;          // Uint8Clamped сам режет 0..255
+          d[o2 + 1] = l + (gr - l) * s;
+          d[o2 + 2] = l + (b - l) * s;
+        }
+      }
+
+      // Авто-положение: меряем силу штриха (80-й перцентиль темноты) внутри
+      // контура. Фломастер и так сочный — ноль; светлый карандаш — ощутимый
+      // буст. Почти пустой лист не трогаем: усиливать там нечего, а шум
+      // бумаги проступил бы пятнами.
+      var inks = [];
+      for (var mi = 0; mi < N; mi += 7) {
+        if (mask[mi * 4 + 3] > 128) {
+          inks.push(255 - (raw[mi * 4] * 0.299 + raw[mi * 4 + 1] * 0.587 + raw[mi * 4 + 2] * 0.114));
+        }
+      }
+      inks.sort(function (a, b) { return a - b; });
+      var p80 = inks.length ? inks[(inks.length * 0.8) | 0] : 0;
+      var auto = p80 < 10 ? 0 : Math.max(0, Math.min(0.8, (115 - p80) / 115));
+
       // ── превью для телефона: рыбка на тёмном фоне ──
       var PV_W = 640, PV_H = Math.round(PV_W * cropH / cropW);
       var pv = document.createElement('canvas');
-      pv.width = PV_W; pv.height = PV_H + 0;
+      pv.width = PV_W; pv.height = PV_H;
       var pvctx = pv.getContext('2d');
-      pvctx.fillStyle = '#0a2233';
-      pvctx.fillRect(0, 0, PV_W, PV_H);
       function mmToPv(p) {
         return [
           (st.ox + st.scale * p[0] - cropMM.x0) / cropW * PV_W,
           (st.oy - st.scale * p[1] - cropMM.y0) / cropH * PV_H
         ];
       }
-      pvctx.save();
-      contourPath(pvctx, fish, mmToPv);
-      pvctx.clip();
-      pvctx.drawImage(tex, 0, 0, PV_W, PV_H);
-      pvctx.restore();
-      contourPath(pvctx, fish, mmToPv);
-      pvctx.strokeStyle = 'rgba(255,255,255,.85)';
-      pvctx.lineWidth = 3;
-      pvctx.stroke();
+      function drawPreview() {
+        pvctx.fillStyle = '#0a2233';
+        pvctx.fillRect(0, 0, PV_W, PV_H);
+        pvctx.save();
+        contourPath(pvctx, fish, mmToPv);
+        pvctx.clip();
+        pvctx.drawImage(tex, 0, 0, PV_W, PV_H);
+        pvctx.restore();
+        contourPath(pvctx, fish, mmToPv);
+        pvctx.strokeStyle = 'rgba(255,255,255,.85)';
+        pvctx.lineWidth = 3;
+        pvctx.stroke();
+      }
+
+      var boost = {
+        auto: auto,
+        value: 0,
+        texCanvas: tex,
+        pvCanvas: pv,
+        set: function (v) {
+          boost.value = v;
+          boostPixels(v);
+          tctx.putImageData(img, 0, 0);
+          drawPreview();
+        },
+        // dataURL — только по требованию: на каждое движение ползунка PNG
+        // кодировать дорого, а нужен он один раз, при отправке в аквариум
+        bake: function () {
+          return { texture: tex.toDataURL('image/png'), preview: pv.toDataURL('image/png') };
+        }
+      };
+      boost.set(auto);
 
       resolve({
         kind: kind,
         title: fish.title,
         titles: fish.titles || null,   // название вида на языках сайта
         texture: tex.toDataURL('image/png'),
-        preview: pv.toDataURL('image/png')
+        preview: pv.toDataURL('image/png'),
+        boost: boost
       });
     });
   }
