@@ -891,23 +891,64 @@ function staticFor(url) {
   return file.startsWith(ROOT + path.sep) ? file : null;
 }
 
+// Пережатые двойники лежат в подпапке webp/ рядом с оригиналом, а не бок о бок
+// с ним: listBackgrounds() читает папку целиком и показал бы каждый фон дважды.
+// Имя файла в настройках аквариума остаётся прежним («01-0.png») — подменяем
+// только то, что уходит в сеть.
+const WEBP_SRC_RE = /\.(png|jpe?g)$/i;
+
+function webpTwin(file) {
+  if (!WEBP_SRC_RE.test(file)) return null;
+  const twin = path.join(
+    path.dirname(file), 'webp', path.basename(file).replace(WEBP_SRC_RE, '.webp')
+  );
+  return fs.existsSync(twin) ? twin : null;
+}
+
+// Код правим часто, поэтому он перепроверяется всегда — но с ETag перепроверка
+// стоит 304 вместо повторной выкачки. Картинки и модели меняются редко, их
+// держим сутки; всё из data/ живёт вместе с аквариумом и меняется на ходу.
+function cacheControl(ext, url) {
+  if (ext === '.html' || ext === '.js' || ext === '.css') return 'no-cache';
+  if (url.startsWith('/data/')) return 'no-cache';
+  return 'public, max-age=86400';
+}
+
 http.createServer((req, res) => {
   const url = decodeURIComponent(req.url.split('?')[0]);
 
   if (url.startsWith('/api/')) return handleApi(req, res, url);
 
   const page = pageFor(url);
-  const file = page ? path.join(ROOT, page) : staticFor(url);
+  let file = page ? path.join(ROOT, page) : staticFor(url);
 
   if (!file) return send(res, 404, 'not found', 'text/plain');
   if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
     return send(res, 404, 'not found', 'text/plain');
   }
 
+  // Договариваемся по Accept, а не по имени файла: старые ссылки на .png в
+  // настройках аквариумов продолжают работать, а браузер получает webp.
+  const canWebp = WEBP_SRC_RE.test(file);
+  if (canWebp && /image\/webp/.test(req.headers.accept || '')) {
+    file = webpTwin(file) || file;
+  }
+
   const ext = path.extname(file).toLowerCase();
-  const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
-  // код без кэша: иначе браузер молча живёт на старой версии страницы после правок
-  if (ext === '.html' || ext === '.js' || ext === '.css') headers['Cache-Control'] = 'no-cache';
+  const stat = fs.statSync(file);
+  // Размер и время правки вместо хэша: считать его на каждый запрос к
+  // трёхмегабайтной картинке дороже, чем отдать её.
+  const etag = `W/"${stat.size.toString(16)}-${Math.trunc(stat.mtimeMs).toString(16)}"`;
+  const headers = { 'Cache-Control': cacheControl(ext, url), ETag: etag };
+  // Без Vary кэш-посредник отдал бы webp тому, кто его не понимает.
+  if (canWebp) headers.Vary = 'Accept';
+
+  if (req.headers['if-none-match'] === etag) {
+    res.writeHead(304, headers);
+    return res.end();
+  }
+
+  headers['Content-Type'] = MIME[ext] || 'application/octet-stream';
   res.writeHead(200, headers);
   fs.createReadStream(file).pipe(res);
 }).listen(PORT, '0.0.0.0', () => {
