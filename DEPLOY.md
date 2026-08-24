@@ -1,192 +1,109 @@
-# Деплой
+# PP Aqua deployment
 
-Аквариум — один контейнер: сервер на голом Node, порт 8000 внутри
-докер-сети, наружу не пробрасывается. HTTPS, домен и сертификат — на
-обратном прокси. Своего прокси в этом compose нет намеренно: на сервере,
-где уже работают другие контейнеры, 80 и 443 заняты, и второй прокси туда
-не встанет.
+PP Aqua runs as a single Node.js container behind a reverse proxy. The container listens on port 8000 inside the Docker network. HTTPS, the public domain, and certificates are handled by the reverse proxy.
 
-Данные — обычная папка `data/` рядом с проектом, пак моделей — папка
-`pack/`, потому что в репозиторий он не входит.
+## Requirements
 
-## Что понадобится
+- Linux server with Docker and Docker Compose.
+- At least 1 CPU core, 1 GB RAM, and 20 GB disk for a small family deployment.
+- An external Docker network named `web` shared with the reverse proxy.
+- A domain with an A record pointing to the server.
+- The purchased fish model pack, converted on Windows and copied to the server.
 
-- Сервер с докером: 1 ядро, 1 ГБ памяти, 20 ГБ диска. Хватает с запасом —
-  зависимостей нет, память почти не ест, диск съедают только рисунки.
-- **Traefik** (или любой другой прокси) с внешней docker-сетью `web`
-  и резолвером `letsencrypt`. Проверить: `docker network ls | grep web`.
-  Если прокси ещё нет — см. «Без Traefik» в конце.
-- Домен и **A-запись** на адрес сервера.
+## First deployment
 
-## Один раз
-
-**1. Код**
-
-```bash
-git clone https://github.com/MrMoT9I/paper-aquarium.git /opt/docker/apps/paper-aquarium
-cd /opt/docker/apps/paper-aquarium
-```
-
-**2. Настройки**
+Clone this repository wherever you keep your application sources, then configure `.env` from `.env.example`.
 
 ```bash
 cp .env.example .env
-nano .env            # DOMAIN — обязательно
+nano .env
 ```
 
-**3. Пак моделей**
+Set `DOMAIN` to the domain you control.
 
-В репозитории его нет. Собираешь у себя на Windows и копируешь на сервер:
+### Fish pack
+
+Build the purchased pack on Windows:
 
 ```powershell
-# у себя: FBX из купленного архива → glTF
 powershell -ExecutionPolicy Bypass -File tools\convert-pack.ps1
-
-# и на сервер (из папки проекта)
-scp -r assets\models\pack mikalai@СЕРВЕР:/opt/docker/apps/paper-aquarium/pack
 ```
 
-Проверить, что доехало: `ls pack | wc -l` — должно быть 28 папок,
-в каждой `.gltf`, `buffer.bin` и текстура.
+Copy the resulting `assets/models/pack/` directory to the server as `pack/` beside the repository's `data/` directory.
 
-**4. Папка данных**
+### Data directory
 
-Контейнер работает не под root, поэтому владельца надо проставить заранее:
+The container does not run as root. Make sure the mounted data directory is writable by UID 1000:
 
 ```bash
 mkdir -p data
 chown -R 1000:1000 data
 ```
 
-**5. Запуск**
+### Start
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 docker compose -f docker-compose.prod.yml logs -f aqua
 ```
 
-В логе должно появиться «Аквариумы: http://localhost:8000/». Через
-полминуты `https://aquarium.mrmot9i.com` открывается с сертификатом.
-
-## Каждый день
+## Updating
 
 ```bash
-cd /opt/docker/apps/paper-aquarium
-
-# забрать изменения
 git fetch --all --prune
 git checkout main
 git pull --ff-only
-
-# пересобрать и поднять
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-
-# статус и логи
 docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f --tail 200
-
-# остановить (данные на месте)
-docker compose -f docker-compose.prod.yml stop
 ```
 
-Пересборка образа данные не трогает: аквариумы лежат в `./data`, пак —
-в `./pack`, оба монтируются снаружи. Именованных томов у проекта нет,
-так что `down -v` тут ничего не стирает — но привычки ради лучше
-обходиться `stop`.
+The `data/` and `pack/` directories are mounted from the host, so rebuilding the image does not remove them.
 
-## Бэкап
+## Backup
 
-Единственное, что нельзя потерять, — `data/`: там детские рисунки, имена
-аквариумов и хеши паролей. Всё остальное восстанавливается из репозитория
-и с твоего компьютера.
+The most important directory is `data/` because it contains aquarium metadata and children's drawings.
+
+A simple daily backup is:
 
 ```bash
-# /etc/cron.d/aqua-backup — раз в сутки, храним две недели
-0 4 * * * root tar czf /var/backups/aqua-$(date +\%F).tgz \
-          -C /opt/docker/apps/paper-aquarium data && \
-          find /var/backups -name 'aqua-*.tgz' -mtime +14 -delete
+tar czf /var/backups/aqua-$(date +%F).tgz -C /path/to/pp-aqua data
 ```
 
-И хотя бы раз в месяц копию с сервера к себе — `scp` или `rsync`. Бэкап,
-который лежит на том же диске, что и данные, бэкапом не является.
+Keep copies on a different disk or machine. A backup stored on the same disk is not a disaster-recovery backup.
 
-## Журнал обращений
+## Reverse proxy
 
-Сам аквариум журнала обращений не ведёт: в его лог попадает только
-«в такой-то аквариум добавлена рыбка», без адресов. Но запросы идут через
-прокси, и что видит посетитель в правилах — зависит уже от него.
-
-Посмотри, включён ли у Traefik `--accesslog`:
-
-```bash
-docker inspect traefik --format '{{json .Config.Cmd}}' | tr ',' '\n' | grep -i log
-```
-
-Если включён — прокси пишет строку на каждый запрос: время, IP, адрес
-страницы, код ответа. Это обычная практика, и страница «Правила и данные»
-про такой журнал честно предупреждает. Дальше на выбор:
-
-- оставить как есть (текст правил уже соответствует);
-- убрать из журнала только адреса — флаг
-  `--accesslog.fields.names.ClientHost=drop`;
-- выключить журнал совсем — убрать `--accesslog=true`.
-
-Два последних варианта — про весь прокси сразу, а не про один аквариум:
-у Traefik нет фильтра «не логировать вот этот роутер». И проверь ротацию
-докера (`/etc/docker/daemon.json`, `log-opts.max-size`): без неё журнал
-растёт, пока не кончится диск.
-
-## Что важно знать про доступ
-
-Аквариум устроен так, что **ссылка = право смотреть и добавлять рыбок**,
-а пароль нужен только на необратимое (удалить рыбок или аквариум,
-переименовать, сменить пароль). Это сделано ради ребёнка: он открывает
-съёмку с телефона по ссылке, и пароля у него нет.
-
-Отсюда следствия для публичного сервера:
-
-- Кто угодно может завести аквариум на твоём сервере. Ограничено:
-  `AQUA_TANKS_PER_HOUR` (5 с адреса в час) и `AQUA_MAX_TANKS` (200 всего).
-- Кто угодно со ссылкой на аквариум может залить туда картинки. Ограничено:
-  `AQUA_MAX_FISH` (40 на аквариум), `AQUA_MAX_BG` (8 своих фонов),
-  размером картинки (3 МБ рыбка, 6 МБ фон) и общим `AQUA_MAX_DATA_MB`.
-- Все пределы меняются в `.env` без правки кода.
-
-Счётчик «сколько аквариумов завели с адреса» смотрит на заголовок
-`X-Forwarded-For` — его проставляет Traefik. Адрес живёт в памяти около
-часа и на диск не попадает.
-
-Если хочется, чтобы аквариум был только для своих, самый простой способ —
-basic-auth на прокси, лейблами в `docker-compose.prod.yml`:
-
-```yaml
-- "traefik.http.middlewares.aqua-auth.basicauth.users=мама:$$2y$$05$$..."
-- "traefik.http.routers.aqua.middlewares=aqua-compress,aqua-auth"
-```
-
-Хеш: `htpasswd -nb мама пароль`, доллары в compose удваиваются. Только
-помни: тогда пароль спросят и у ребёнка на съёмке, и у телевизора.
-
-## Если что-то не так
-
-| Симптом | Куда смотреть |
-|---|---|
-| Сайт не открывается, 404 от прокси | `docker compose -f docker-compose.prod.yml ps`; контейнер должен быть в сети `web`: `docker inspect aqua --format '{{json .NetworkSettings.Networks}}'` |
-| Сертификат не выписался | логи Traefik; чаще всего A-запись не доехала или 80 порт закрыт |
-| Аквариум пустой, рыбок нет | пак не скопирован: `ls pack`, `docker exec aqua wget -qO- localhost:8000/api/pack \| head -c 200` |
-| «сервер недоступен» на странице | `docker compose -f docker-compose.prod.yml logs aqua` |
-| Не сохраняются аквариумы | владелец `data/`: `ls -ln data` — должен быть 1000:1000 |
-| Кончилось место | `du -sh data`, потом `AQUA_MAX_DATA_MB` или чистка `data/trash-tanks` |
-
-## Без Traefik
-
-Если прокси на сервере ещё нет, самый короткий путь — поднять его один раз
-рядом, отдельным compose, и завести сеть `web`:
+The supplied Compose configuration expects an external Docker network called `web` and a reverse proxy that terminates HTTPS.
 
 ```bash
 docker network create web
 ```
 
-Дальше любой гайд по Traefik + Let's Encrypt: аквариуму нужны только
-внешняя сеть `web`, entrypoint `websecure` и резолвер с именем
-`letsencrypt` — имена зашиты в лейблы и меняются там же.
+The proxy should route the configured domain to the `aqua` service on port 8000 and provide TLS.
+
+## Public deployment considerations
+
+The aquarium link grants the ability to watch, feed, add fish, and upload backgrounds. This is deliberate because the phone capture workflow is designed to be easy for a child to use.
+
+For a public deployment:
+
+- Keep HTTPS mandatory.
+- Keep all upload and storage limits enabled.
+- Review proxy access logs and retention.
+- Back up `data/` separately from the application image.
+- Consider proxy-level authentication if the aquarium should be private to a family.
+
+## Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| 404 from the proxy | Container status and membership in the `web` network |
+| TLS certificate failure | DNS A record and reverse-proxy logs |
+| Empty aquarium | Verify that `pack/` exists and `/api/pack` returns models |
+| Aquarium data does not save | Check ownership of `data/` and UID 1000 permissions |
+| Disk full | Inspect `data/`, the trash directory, and `AQUA_MAX_DATA_MB` |
+| Site says the server is unavailable | `docker compose logs aqua` |
+
+## Notes
+
+This fork intentionally avoids upstream-specific domains, usernames, deployment paths, and contact links. Replace the generic deployment placeholders with your own infrastructure before publishing.
