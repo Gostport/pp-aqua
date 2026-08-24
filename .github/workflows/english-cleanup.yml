@@ -1,0 +1,582 @@
+name: English-only cleanup
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clean language, comments, docs, and stale fork references
+        env:
+          OLD_REFS: 'MrMoT9I|mrmot9i|paper-aquarium|aquarium\.mrmot9i\.com|/opt/docker/apps/paper-aquarium|mikalai|купил 3д рыбок'
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+          import re
+          import subprocess
+
+          root = Path('.')
+
+          print('Pre-cleanup stale-reference audit:')
+          try:
+              old = subprocess.run(
+                  ['git', 'grep', '-n', '-I', '-E', r'MrMoT9I|mrmot9i|paper-aquarium|aquarium\.mrmot9i\.com|/opt/docker/apps/paper-aquarium|mikalai|купил 3д рыбок'],
+                  text=True, capture_output=True
+              )
+              print(old.stdout or '(none found)')
+          except Exception as exc:
+              print('Audit error:', exc)
+
+          readme = r'''# PP Aqua
+
+PP Aqua is a small interactive aquarium for children. A child colours a printed fish sheet, photographs it with a phone, and the fish appears in a 3D aquarium on a larger screen.
+
+```text
+A4 colouring sheet → phone photo → captured texture → 3D fish
+```
+
+The project is intentionally lightweight: a plain Node.js server with no application dependencies, browser JavaScript, three.js, SVG colouring sheets, and JSON manifests. Everything created by users lives under `data/`.
+
+## What it does
+
+- Print an A4 fish colouring sheet.
+- Colour it with markers.
+- Photograph the whole sheet with a phone.
+- Detect the four corner markers and correct perspective.
+- Extract the drawing using the fish contour in the manifest.
+- Apply the drawing as a texture to the corresponding 3D fish.
+- Let fish swim in a three.js aquarium.
+- Feed fish, change backgrounds, remove fish, and manage aquariums.
+- Open an aquarium on another screen with a QR code, link, or temporary TV PIN.
+- Offer a public showcase aquarium when `AQUA_DEMO_TANK` is configured.
+
+## Architecture
+
+### Capture pipeline
+
+Each sheet has four black 6×6 markers. Their 16 inner cells encode the fish species and corner orientation. `assets/capture.js` searches brightness thresholds for the markers, reconstructs the sheet perspective, extracts the fish region from the manifest contour, and trims the printed outline so it does not remain as a dark edge on the captured fish.
+
+The resulting image is mapped onto the 3D model through a planar unwrap of its side silhouette.
+
+### Aquarium
+
+`demos/realistic-tank.html` contains the main three.js scene. Fish swim inside a volume derived from the camera frustum rather than a simple box. `assets/fish-frame.js` determines model orientation from animation so different fish can share the same swimming system.
+
+### UI and localization
+
+The application uses a centralized `assets/i18n.js` module. The supported interface languages are **English and Polish**. Language selection is stored in `localStorage`, and English is the fallback.
+
+The localization system is intentionally retained. Adding another language later means adding another dictionary and, for printable sheets, another localized SVG set.
+
+### Data model
+
+Each aquarium lives under:
+
+```text
+data/tanks/<10-character-code>/
+├── meta.json
+├── settings.json
+├── preview.jpg
+├── fish/
+├── backgrounds/
+└── trash/
+```
+
+Deleted aquariums move to `data/trash-tanks/`. Deleted drawings stay recoverable for `AQUA_TRASH_DAYS` days before permanent removal.
+
+## Running locally
+
+Requirements:
+
+- Node.js 18 or newer
+- No `npm install` is required for the main application.
+- three.js is included under `vendor/`.
+
+Start the server:
+
+```bash
+node server.js
+```
+
+Open:
+
+```text
+http://localhost:8000
+```
+
+The server also prints LAN addresses so a phone or TV on the same Wi-Fi can open the aquarium.
+
+## Access model
+
+There are no user accounts.
+
+| Action | Aquarium code | Password |
+|---|:---:|:---:|
+| Watch aquarium | ✓ | |
+| Add a fish | ✓ | |
+| Feed fish | ✓ | |
+| Change background | ✓ | |
+| Remove fish | | ✓ |
+| Delete aquarium | | ✓ |
+| Rename aquarium | | ✓ |
+| Change password | | ✓ |
+
+The long aquarium code is deliberate. The identifier uses 31 characters and 10 positions, giving about 8×10^14 possible combinations. The temporary five-digit TV PIN is not an authentication credential. It only grants the same access as the aquarium link and expires after five minutes.
+
+Password attempts are throttled after repeated failures. Passwords are stored on the server only as salted scrypt hashes.
+
+## Configuration
+
+The main environment variables are:
+
+| Variable | Default | Purpose |
+|---|---:|---|
+| `PORT` | `8000` | HTTP listening port |
+| `AQUA_MAX_TANKS` | `200` | Maximum aquariums on the server |
+| `AQUA_TANKS_PER_HOUR` | `5` | New aquariums allowed per client address per hour |
+| `AQUA_MAX_FISH` | `40` | Maximum fish in one aquarium |
+| `AQUA_MAX_BG` | `8` | Maximum custom backgrounds in one aquarium |
+| `AQUA_MAX_DATA_MB` | `2048` | Maximum size of the `data/` directory |
+| `AQUA_TRASH_DAYS` | `30` | Retention period for deleted content |
+| `AQUA_DEMO_TANK` | empty | Aquarium code used for the public showcase |
+
+Image limits are 3 MB per fish, 6 MB per background, and 12 MB per request body.
+
+## Deployment
+
+The production setup uses one Node container behind an external reverse proxy. The repository includes `Dockerfile`, `docker-compose.prod.yml`, and `.env.example`.
+
+The container exposes port 8000 only to the Docker network. HTTPS, the domain, and certificates are handled by the reverse proxy.
+
+See `DEPLOY.md` for the deployment procedure, backups, proxy configuration, and troubleshooting.
+
+## Security notes
+
+The application is designed first for a trusted home network. If it is exposed to the public internet:
+
+- HTTPS is required because the aquarium password is sent in the `X-Tank-Pass` request header.
+- Keep the reverse proxy in front of the application.
+- Keep upload and aquarium limits enabled.
+- Review reverse-proxy access logging before publishing the service.
+- Back up `data/`, because it contains user-created drawings and aquarium metadata.
+
+The server deliberately allows adding fish and backgrounds with the aquarium link because the intended capture workflow is phone-first and child-friendly. Irreversible actions remain password protected.
+
+## Fish model pack
+
+The 3D fish models are not included in this repository. They come from a separately purchased model pack whose licence does not permit redistribution.
+
+The included conversion tool is Windows/PowerShell based and expects the purchased FBX files under `purchased-fish/fbx/`.
+
+```powershell
+npm install --no-save fbx2gltf
+$env:FBX2GLTF = (Get-ChildItem node_modules -Recurse -Filter FBX2glTF.exe)[0].FullName
+powershell -ExecutionPolicy Bypass -File tools\convert-pack.ps1
+```
+
+The conversion process produces glTF files under `assets/models/pack/`. Textures are reduced to 1024 px JPEGs and model metadata is written to `pack.json`.
+
+The exact model pack is not a hard runtime requirement. Other `.glb` or `.gltf` models can be added manually, but printable sheets must be rebuilt if the species set changes.
+
+## Coloring-sheet tools
+
+| Tool | Purpose |
+|---|---|
+| `tools/silhouettes.html` | Inspect model silhouettes and create contour data |
+| `tools/make-coloring.js` | Generate printable sheets and the manifest |
+| `tools/test-capture.html` | Test marker recognition under skew, rotation, and noise |
+| `tools/convert-pack.ps1` | Convert purchased FBX models to glTF |
+
+The marker generator keeps sufficient Hamming distance between species codes so a single misread cell does not silently turn one fish into another.
+
+## Data and deletion
+
+User data is kept in `data/`, which is intentionally outside the normal source tree used for static serving. The server exposes only the specific data files needed by the browser.
+
+Deleted drawings and aquariums first move to a server-side trash area. They are permanently removed after `AQUA_TRASH_DAYS` days.
+
+For a public deployment, review `terms.html` and replace any deployment-specific contact or legal details before publishing.
+
+## License
+
+The application code is MIT licensed.
+
+The aquarium background assets included in `assets/backgrounds/` are part of the project. The purchased fish models are not part of the repository and remain subject to their own licence.
+
+The colouring-sheet silhouettes and manifests are derived from the purchased models and should be rebuilt if a different model set is used.
+
+## Fork status
+
+This repository is a maintained fork. Repository-specific names, links, deployment paths, and contact references in the upstream project are intentionally not carried forward.
+'''
+          (root / 'README.md').write_text(readme, encoding='utf-8')
+          if (root / 'README.ru.md').exists():
+              (root / 'README.ru.md').unlink()
+
+          deploy = r'''# PP Aqua deployment
+
+PP Aqua runs as a single Node.js container behind a reverse proxy. The container listens on port 8000 inside the Docker network. HTTPS, the public domain, and certificates are handled by the reverse proxy.
+
+## Requirements
+
+- Linux server with Docker and Docker Compose.
+- At least 1 CPU core, 1 GB RAM, and 20 GB disk for a small family deployment.
+- An external Docker network named `web` shared with the reverse proxy.
+- A domain with an A record pointing to the server.
+- The purchased fish model pack, converted on Windows and copied to the server.
+
+## First deployment
+
+Clone this repository wherever you keep your application sources, then configure `.env` from `.env.example`.
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Set `DOMAIN` to the domain you control.
+
+### Fish pack
+
+Build the purchased pack on Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\convert-pack.ps1
+```
+
+Copy the resulting `assets/models/pack/` directory to the server as `pack/` beside the repository's `data/` directory.
+
+### Data directory
+
+The container does not run as root. Make sure the mounted data directory is writable by UID 1000:
+
+```bash
+mkdir -p data
+chown -R 1000:1000 data
+```
+
+### Start
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+docker compose -f docker-compose.prod.yml logs -f aqua
+```
+
+## Updating
+
+```bash
+git fetch --all --prune
+git checkout main
+git pull --ff-only
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+docker compose -f docker-compose.prod.yml ps
+```
+
+The `data/` and `pack/` directories are mounted from the host, so rebuilding the image does not remove them.
+
+## Backup
+
+The most important directory is `data/` because it contains aquarium metadata and children's drawings.
+
+A simple daily backup is:
+
+```bash
+tar czf /var/backups/aqua-$(date +%F).tgz -C /path/to/pp-aqua data
+```
+
+Keep copies on a different disk or machine. A backup stored on the same disk is not a disaster-recovery backup.
+
+## Reverse proxy
+
+The supplied Compose configuration expects an external Docker network called `web` and a reverse proxy that terminates HTTPS.
+
+```bash
+docker network create web
+```
+
+The proxy should route the configured domain to the `aqua` service on port 8000 and provide TLS.
+
+## Public deployment considerations
+
+The aquarium link grants the ability to watch, feed, add fish, and upload backgrounds. This is deliberate because the phone capture workflow is designed to be easy for a child to use.
+
+For a public deployment:
+
+- Keep HTTPS mandatory.
+- Keep all upload and storage limits enabled.
+- Review proxy access logs and retention.
+- Back up `data/` separately from the application image.
+- Consider proxy-level authentication if the aquarium should be private to a family.
+
+## Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| 404 from the proxy | Container status and membership in the `web` network |
+| TLS certificate failure | DNS A record and reverse-proxy logs |
+| Empty aquarium | Verify that `pack/` exists and `/api/pack` returns models |
+| Aquarium data does not save | Check ownership of `data/` and UID 1000 permissions |
+| Disk full | Inspect `data/`, the trash directory, and `AQUA_MAX_DATA_MB` |
+| Site says the server is unavailable | `docker compose logs aqua` |
+
+## Notes
+
+This fork intentionally avoids upstream-specific domains, usernames, deployment paths, and contact links. Replace the generic deployment placeholders with your own infrastructure before publishing.
+'''
+          (root / 'DEPLOY.md').write_text(deploy, encoding='utf-8')
+
+          terms = r'''<!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Terms and data — PP Aqua</title>
+          <style>
+            :root { --ink:#eaf6ff; --muted:#8aa6bd; --dim:#5f7c94; --card:rgba(9,24,40,.72); --line:rgba(140,200,255,.16); --accent:#58d6ff; }
+            * { box-sizing:border-box; }
+            html,body { margin:0; }
+            body { min-height:100vh; background:radial-gradient(1200px 800px at 20% -10%,#0d4a6b 0%,transparent 60%),linear-gradient(180deg,#051624 0%,#030d17 100%); background-attachment:fixed; color:var(--ink); font:15.5px/1.7 "Segoe UI",system-ui,-apple-system,sans-serif; }
+            .wrap { max-width:720px; margin:0 auto; padding:56px 24px 80px; }
+            a { color:var(--accent); }
+            h1 { font-size:clamp(26px,4vw,36px); line-height:1.15; margin:0 0 8px; font-weight:650; }
+            h2 { font-size:19px; margin:34px 0 10px; font-weight:620; }
+            p { margin:0 0 12px; }
+            .lead { color:var(--muted); font-size:16.5px; margin-bottom:28px; }
+            .back { display:inline-block; color:var(--muted); text-decoration:none; font-size:14px; }
+            .back:hover { color:var(--accent); }
+            ul { margin:0 0 12px; padding-left:22px; }
+            li { margin-bottom:6px; }
+            .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 22px; margin:20px 0; }
+            footer { margin-top:40px; padding-top:20px; border-top:1px solid var(--line); color:var(--dim); font-size:13.5px; }
+            code { background:rgba(140,200,255,.08); border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--muted); font-family:ui-monospace,Consolas,monospace; font-size:13px; }
+          </style>
+          </head>
+          <body>
+          <div class="wrap">
+            <a class="back" href="/">← to the aquariums</a>
+            <h1>Terms and data</h1>
+            <p class="lead">A plain-language summary of what PP Aqua stores and how the service behaves.</p>
+
+            <h2>What this is</h2>
+            <p>PP Aqua is a hobby project for turning children's coloured fish drawings into animated 3D fish. It is provided as-is and may change or become unavailable.</p>
+
+            <h2>Accounts, codes, and passwords</h2>
+            <ul>
+              <li>There are no user accounts.</li>
+              <li>The aquarium code acts as the viewing link and allows adding fish and changing non-destructive settings.</li>
+              <li>The aquarium password protects destructive actions such as deleting fish, deleting the aquarium, renaming it, and changing the password.</li>
+              <li>If the code or password is lost, there is no account-based recovery mechanism.</li>
+            </ul>
+
+            <h2>What is stored</h2>
+            <ul>
+              <li>Uploaded fish drawings.</li>
+              <li>The aquarium name.</li>
+              <li>A scene preview image.</li>
+              <li>Custom aquarium backgrounds.</li>
+              <li>A salted scrypt password hash, never the plaintext password.</li>
+            </ul>
+
+            <div class="card">
+              <p><b>Application logging:</b> the aquarium server does not intentionally record visitor IP addresses in its application data. A reverse proxy in front of it may create ordinary technical access logs, depending on its configuration.</p>
+            </div>
+
+            <h2>Deletion</h2>
+            <p>Deleted fish and aquariums are moved to server-side trash first so accidental deletion can be recovered. Trash is permanently purged after the configured retention period, 30 days by default.</p>
+
+            <h2>User responsibility</h2>
+            <p>The service is intended for children's fish drawings. Do not upload unlawful, abusive, or unrelated material. The operator may remove content or disable access when necessary to protect the service or its users.</p>
+
+            <h2>Personal data</h2>
+            <p>The service is designed to minimize personal data. It does not require an account, email address, or profile. A public deployment should provide a jurisdiction-appropriate privacy notice and a real contact address before accepting public users.</p>
+
+            <h2>Fish models</h2>
+            <p>The 3D fish models are separately licensed assets and are not part of the MIT-licensed application source.</p>
+
+            <footer>These terms are a project-level template, not legal advice. Review them for the jurisdiction and operator details of the deployment before publishing.</footer>
+          </div>
+          </body>
+          </html>
+          '''
+          (root / 'terms.html').write_text(terms, encoding='utf-8')
+
+          i18n = root / 'assets' / 'i18n.js'
+          text = i18n.read_text(encoding='utf-8')
+          text = re.sub(r'\n\s*ru:\s*\{.*?\n\s*\},\n\n\s*en:\s*\{', '\n    en: {', text, count=1, flags=re.S)
+          text = text.replace("var LANGS = ['ru', 'en', 'pl'];", "var LANGS = ['en', 'pl'];")
+          text = re.sub(r"\n\s*ru:\s*\{[^\n]*\},", '', text, count=1)
+          text = text.replace("(PLURALS[lang] || PLURALS.ru)", "(PLURALS[lang] || PLURALS.en)")
+          text = text.replace("DICT[lang][key]) || DICT.ru[key] || key", "DICT[lang][key]) || DICT.en[key] || key")
+          text = re.sub(r"\n\s*if \(code === 'be' \|\| code === 'uk' \|\| code === 'kk'\) return 'ru';.*", '', text)
+          i18n.write_text(text, encoding='utf-8')
+
+          manifest = root / 'assets' / 'coloring' / 'manifest.json'
+          data = json.loads(manifest.read_text(encoding='utf-8-sig'))
+          for fish in data.get('fish', []):
+              name = fish['name']
+              fish.pop('title', None)
+              titles = fish.get('titles') or {}
+              titles.pop('ru', None)
+              fish['titles'] = titles
+              sheets = fish.get('sheets') or {}
+              sheets.pop('ru', None)
+              sheets['en'] = f'assets/coloring/{name}.en.svg'
+              sheets['pl'] = f'assets/coloring/{name}.pl.svg'
+              fish['sheets'] = sheets
+              fish['svg'] = f'assets/coloring/{name}.en.svg'
+          manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          coloring = root / 'assets' / 'coloring'
+          for p in coloring.glob('*.svg'):
+              if not p.name.endswith('.en.svg') and not p.name.endswith('.pl.svg'):
+                  p.unlink()
+
+          package = root / 'package.json'
+          pkg = json.loads(package.read_text(encoding='utf-8'))
+          pkg['name'] = 'pp-aqua'
+          pkg['description'] = 'PP Aqua: turn a coloured paper fish into a swimming 3D fish'
+          package.write_text(json.dumps(pkg, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+          gitignore = root / '.gitignore'
+          if gitignore.exists():
+              g = gitignore.read_text(encoding='utf-8')
+              g = g.replace('купил 3д рыбок', 'purchased-fish')
+              gitignore.write_text(g, encoding='utf-8')
+
+          convert = root / 'tools' / 'convert-pack.ps1'
+          if convert.exists():
+              c = convert.read_text(encoding='utf-8-sig')
+              c = c.replace('$PSScriptRoot\\..\\купил 3д рыбок', '$PSScriptRoot\\..\\purchased-fish')
+              c = c.replace('пропуск (не сконвертировалась):', 'skipped (conversion failed):')
+              c = c.replace('пропуск (нет текстур):', 'skipped (no textures):')
+              c = c.replace('пропуск (пустая модель):', 'skipped (empty model):')
+              convert.write_text(c, encoding='utf-8')
+
+          generator = root / 'tools' / 'make-coloring.js'
+          if generator.exists():
+              g = generator.read_text(encoding='utf-8')
+              g = g.replace("const LANGS = ['ru', 'en', 'pl'];", "const LANGS = ['en', 'pl'];")
+              g = re.sub(r"\s*ru:\s*'[^']*',", '', g)
+              g = g.replace("lang === 'ru' ? '' : '.' + lang", "'.' + lang")
+              g = g.replace("name + (lang === 'ru' ? '' : '.' + lang) + '.svg'", "name + '.' + lang + '.svg'")
+              g = g.replace("throw new Error('не хватило кодов: нужно ' + count + ' при разбросе от ' + MIN_DIST);", "throw new Error('not enough marker codes for ' + count + ' species at distance ' + MIN_DIST);")
+              g = g.replace("'title':", "'title':")
+              generator.write_text(g, encoding='utf-8')
+
+          server = root / 'server.js'
+          if server.exists():
+              s = server.read_text(encoding='utf-8')
+              replacements = {
+                  "name: 'Аквариум'": "name: 'Aquarium'",
+                  "'слишком много попыток'": "'too many attempts'",
+                  "'нужен пароль аквариума'": "'aquarium password required'",
+                  "`корзина: удалено безвозвратно ${gone} шт. старше ${TRASH_DAYS} дней`": "`trash purge: permanently removed ${gone} items older than ${TRASH_DAYS} days`",
+                  "'{\\\"error\\\":\\\"нет такого аквариума\\\"}'": "'{\\\"error\\\":\\\"aquarium not found\\\"}'",
+                  "'{\\\"error\\\":\\\"на сервере кончилось место\\\"}'": "'{\\\"error\\\":\\\"server storage limit reached\\\"}'",
+                  "'{\\\"error\\\":\\\"нужен image: dataURL jpeg\\\"}'": "'{\\\"error\\\":\\\"image dataURL jpeg required\\\"}'",
+                  "'{\\\"error\\\":\\\"пустой снимок\\\"}'": "'{\\\"error\\\":\\\"empty preview\\\"}'",
+                  "'{\\\"error\\\":\\\"пароль от 4 знаков\\\"}'": "'{\\\"error\\\":\\\"password must be at least 4 characters\\\"}'",
+                  "`пароль аквариума ${t.id} изменён`": "`aquarium password changed for ${t.id}`",
+                  "`- аквариум ${t.id} → в корзину (data/trash-tanks)`": "`- aquarium ${t.id} -> trash (data/trash-tanks)`",
+                  "'в аквариуме уже ' + LIMITS.fish + ' рыбок — тесно'": "'aquarium already has ' + LIMITS.fish + ' fish'",
+                  "'{\\\"error\\\":\\\"нет такой модели в паке\\\"}'": "'{\\\"error\\\":\\\"model not found in pack\\\"}'",
+                  "`+ рыбка из пака ${model.name} в ${t.id} — всего ${listFish(t).length}`": "`+ pack fish ${model.name} added to ${t.id} (${listFish(t).length} total)`",
+                  "'{\\\"error\\\":\\\"нужны kind и texture (dataURL png/jpeg)\\\"}'": "'{\\\"error\\\":\\\"kind and texture dataURL required\\\"}'",
+                  "'{\\\"error\\\":\\\"картинка рыбки слишком тяжёлая\\\"}'": "'{\\\"error\\\":\\\"fish image is too large\\\"}'",
+                  "`+ рыбка ${data.kind} в ${t.id} (${Math.round(png.length / 1024)} КБ) — всего ${listFish(t).length}`": "`+ fish ${data.kind} added to ${t.id} (${Math.round(png.length / 1024)} KB, ${listFish(t).length} total)`",
+                  "`- рыбка ${delMatch[1]} из ${t.id} → в корзину`": "`- fish ${delMatch[1]} from ${t.id} -> trash`",
+                  "`аквариум ${t.id} очищен, ${list.length} рыбок → в корзину`": "`aquarium ${t.id} cleared, ${list.length} fish -> trash`",
+                  "'своих фонов уже ' + LIMITS.backgrounds": "'custom background limit reached: ' + LIMITS.backgrounds",
+                  "'{\\\"error\\\":\\\"нужен image: dataURL png/jpeg/webp\\\"}'": "'{\\\"error\\\":\\\"image dataURL png/jpeg/webp required\\\"}'",
+                  "'{\\\"error\\\":\\\"фон слишком тяжёлый\\\"}'": "'{\\\"error\\\":\\\"background image is too large\\\"}'",
+                  "'{\\\"error\\\":\\\"пустая картинка\\\"}'": "'{\\\"error\\\":\\\"empty image\\\"}'",
+                  "`+ фон ${name} в ${t.id} (${Math.round(buf.length / 1024)} КБ)`": "`+ background ${name} added to ${t.id} (${Math.round(buf.length / 1024)} KB)`",
+                  "'{\\\"error\\\":\\\"встроенный фон удалить нельзя\\\"}'": "'{\\\"error\\\":\\\"built-in backgrounds cannot be deleted\\\"}'",
+                  "`- фон ${name} из ${t.id} удалён`": "`- background ${name} removed from ${t.id}`",
+                  "`🐟 корм насыпан в ${t.id}`": "`🐟 feed event in ${t.id}`",
+                  "'{\\\"error\\\":\\\"слишком часто; подожди немного\\\"}'": "'{\\\"error\\\":\\\"too frequent; wait a moment\\\"}'",
+                  "'{\\\"error\\\":\\\"свободных кодов нет — попробуй позже\\\"}'": "'{\\\"error\\\":\\\"no free codes; try later\\\"}'",
+                  "'{\\\"error\\\":\\\"нет такого кода\\\"}'": "'{\\\"error\\\":\\\"code not found\\\"}'",
+                  "'{\\\"error\\\":\\\"демо не настроено\\\"}'": "'{\\\"error\\\":\\\"demo not configured\\\"}'",
+                  "'{\\\"error\\\":\\\"на сервере больше нет места для новых аквариумов\\\"}'": "'{\\\"error\\\":\\\"aquarium limit reached\\\"}'",
+                  "'{\\\"error\\\":\\\"слишком часто; попробуй через час\\\"}'": "'{\\\"error\\\":\\\"too frequent; try again in an hour\\\"}'",
+                  "name: String(data.name || '').trim().slice(0, 60) || 'Мой аквариум'": "name: String(data.name || '').trim().slice(0, 60) || 'My aquarium'",
+                  "console.log(`+ аквариум «${meta.name}» (${id}), фон ${background}`);": "console.log(`+ aquarium ${meta.name} (${id}), background ${background}`);",
+                  "console.log(`Аквариумы: http://localhost:${PORT}/`);": "console.log(`Aquariums: http://localhost:${PORT}/`);",
+                  "console.log(`С телефона (Wi-Fi ${name}): http://${net.address}:${PORT}/`);": "console.log(`Phone (Wi-Fi ${name}): http://${net.address}:${PORT}/`);",
+              }
+              for a, b in replacements.items():
+                  s = s.replace(a, b)
+              server.write_text(s, encoding='utf-8')
+
+          text_exts = {'.js', '.html', '.css', '.ps1', '.yml', '.yaml'}
+          for p in root.rglob('*'):
+              if not p.is_file() or p.suffix.lower() not in text_exts:
+                  continue
+              if '.git' in p.parts:
+                  continue
+              t = p.read_text(encoding='utf-8-sig')
+              if p.suffix.lower() in {'.js', '.html', '.css'}:
+                  t = re.sub(r'^\s*//.*$', '', t, flags=re.M)
+                  t = re.sub(r'^\s*/\*.*?\*/\s*$', '', t, flags=re.M | re.S)
+                  t = re.sub(r'^\s*<!--.*?-->\s*$', '', t, flags=re.M | re.S)
+              elif p.suffix.lower() == '.ps1':
+                  t = re.sub(r'^\s*#.*$', '', t, flags=re.M)
+              elif p.suffix.lower() in {'.yml', '.yaml'}:
+                  t = re.sub(r'^\s*#.*$', '', t, flags=re.M)
+              p.write_text(t, encoding='utf-8')
+
+          for p in root.rglob('*.html'):
+              if '.git' in p.parts:
+                  continue
+              t = p.read_text(encoding='utf-8')
+              t = t.replace('<html lang="ru">', '<html lang="en">')
+              p.write_text(t, encoding='utf-8')
+
+          stale = []
+          cyr = []
+          for p in root.rglob('*'):
+              if not p.is_file() or '.git' in p.parts:
+                  continue
+              if p.stat().st_size > 2_000_000:
+                  continue
+              try:
+                  t = p.read_text(encoding='utf-8')
+              except Exception:
+                  continue
+              if re.search(r'MrMoT9I|mrmot9i|paper-aquarium|aquarium\.mrmot9i\.com|/opt/docker/apps/paper-aquarium|mikalai|купил 3д рыбок', t, re.I):
+                  stale.append(str(p))
+              if re.search(r'[\u0400-\u04FF]', t):
+                  cyr.append(str(p))
+
+          print('Post-cleanup stale-reference matches:', stale or '(none)')
+          print('Post-cleanup Cyrillic files:', cyr or '(none)')
+          if stale or cyr:
+              raise SystemExit(1)
+
+          subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
+          subprocess.run(['git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], check=True)
+          subprocess.run(['git', 'add', '-A'], check=True)
+          subprocess.run(['git', 'commit', '-m', 'chore: remove Russian and upstream references'], check=True)
+          subprocess.run(['git', 'push'], check=True)
+          PY
+
+      - name: Remove this one-shot workflow
+        if: success()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/english-cleanup.yml
+          git commit -m 'chore: remove one-shot cleanup workflow'
+          git push
