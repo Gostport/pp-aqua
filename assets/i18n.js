@@ -1,278 +1,12 @@
-// Три языка: русский, английский, польский.
-//
-// Язык берём из выбора человека (localStorage), а если выбора не было —
-// из настроек его устройства. Ни угадываний по IP, ни отдельного адреса
-// для каждого языка: у аквариума один адрес, и он должен открываться
-// одинаково у всех, кому дали ссылку.
-//
-// Строки лежат в одном месте на все страницы: аквариум, съёмка, раскраски,
-// управление и правила. Разъедутся по файлам — половина останется
-// непереведённой, и заметишь это не ты, а тот, кому ты дал ссылку.
-//
-//   I18N.t('menu.feed.title')            — строка
-//   I18N.t('home.fish', {n: 3})          — с подстановкой
-//   I18N.plural(3, 'fish')               — рыбка / рыбки / рыбок
-//   I18N.apply(root)                     — раскладывает переводы по data-t
-//   I18N.set('pl')                       — переключить и запомнить
-//   I18N.mount(el)                       — нарисовать переключатель RU EN PL
-//
-// В разметке:
-//   <b data-t="menu.feed.title"></b>     — текст
-//   <input data-t-ph="home.code.hint">   — placeholder
-//   <button data-t-title="menu.close">   — подсказка title
-//   <img data-t-alt="cap.photo">         — подпись alt
 (function () {
   'use strict';
 
   var KEY = 'aqua.lang';
-  var LANGS = ['ru', 'en', 'pl'];
+  var LANGS = ['en', 'pl'];
 
   var DICT = {
-    ru: {
-      'lang.name': 'Русский',
-
-      // ── главная ──
-      'home.title': 'Мои аквариумы',
-      'home.lead': 'Распечатай шаблон, раскрась фломастерами, сфотографируй — и рыбка поплывёт. У каждого ребёнка может быть свой аквариум.',
-      'home.empty': 'Пока ни одного аквариума. Создай первый — это займёт секунду.',
-      'home.new': 'Новый аквариум',
-      'home.bycode.title': 'Открыть аквариум по коду',
-      'home.bycode.hint': 'Код нужен только на новом устройстве — на этом аквариумы запоминаются сами. Подойдут и пять цифр из «Открыть на другом экране».',
-      'home.pin.bad.title': 'Эти цифры не подошли',
-      'home.pin.bad.text': 'Код из пяти цифр живёт 5 минут — возможно, он истёк. Попроси показать его заново: на телефоне «Открыть на другом экране» → «Код для телевизора».',
-      'home.pin.many.title': 'Слишком много попыток',
-      'home.pin.many.text': 'Подожди немного и попробуй ещё раз.',
-      'home.bycode.placeholder': 'например, mk4dp7wq2f',
-      'home.bycode.open': 'Открыть',
-      // Четыре шага для того, кто пришёл впервые: увидел рилс — а дальше что?
-      'home.how.title': 'Как это работает',
-      'home.how.s0': 'Создай аквариум',
-      'home.how.s1': 'Распечатай раскраску',
-      'home.how.s2': 'Раскрась фломастерами',
-      'home.how.s3': 'Сфотографируй телефоном',
-      'home.how.s4': 'Открой на большом экране по коду',
-      'home.how.demo': '🐠 Посмотреть живой аквариум',
-      'home.how.demo.sub': 'общая витрина — рыбки уже плавают',
-      'home.card.kill': 'Убрать аквариум',
-      'home.card.empty': 'тут пока пусто',
-      'home.terms': 'Правила и данные ↗',
-      'terms.back': '← к аквариумам',
-      'home.footer.important': 'Важно.',
-      'home.footer.text': ' Аккаунтов нет: по коду аквариум смотрят, по паролю управляют, оба хранит этот браузер. Подробности — в правилах.',
-
-      'home.create.title': 'Новый аквариум',
-      'home.create.text': 'Назови, чтобы отличать в списке — например, по имени ребёнка.',
-      'home.create.value': 'Аквариум',
-      'home.create.ok': 'Создать',
-      'home.created.title': 'Аквариум создан',
-      'home.created.text': 'По коду аквариум открывают и смотрят, по паролю им управляют. На этом устройстве оба уже сохранены — они всегда под рукой в меню аквариума, записывать их прямо сейчас не обязательно. Но где-то сохранить стоит: почты и аккаунта тут нет, восстановить их будет негде.',
-      'home.created.code': 'Код аквариума',
-      'home.created.pass': 'Пароль',
-      'home.created.ok': 'Сохранил, поплыли',
-      'home.create.fail.title': 'Аквариум не создался',
-      'home.create.fail.text': 'Похоже, сервер не отвечает. Проверь, запущен ли node server.js.',
-      'home.remove.title': 'Убрать «{name}»?',
-      'home.remove.text': 'Из списка — аквариум останется на сервере, вернёшь его по коду {code}. Совсем — {what} уедут в корзину на сервере, и по коду он больше не откроется.',
-      'home.remove.whatEmpty': 'аквариум уедет',
-      'home.remove.cancel': 'Отмена',
-      'home.remove.forget': 'Убрать из моего списка',
-      'home.remove.delete': 'Удалить аквариум совсем',
-      'home.remove.pass.title': 'Пароль от «{name}»',
-      'home.remove.pass.text': 'Удалить аквариум совсем можно только с паролем. Если пароля нет — убери аквариум из своего списка, он останется у хозяина.',
-      'home.badcode.title': 'Код не подходит',
-      'home.badcode.text': 'Код аквариума — это ровно 10 символов, буквы и цифры. Проверь, не потерялся ли знак.',
-
-      // ── меню аквариума ──
-      'menu.tank': 'Аквариум',
-      'menu.copied': 'ссылка скопирована',
-      'menu.pass': '🔑 пароль',
-      'menu.pass.set': '🔓 задать пароль',
-      'menu.pass.title': 'Пароль аквариума',
-      'menu.rename.hint': 'Переименовать аквариум',
-      'menu.close': 'Закрыть меню',
-      'menu.back': '← назад',
-      'menu.hint': 'нажми в любом месте — покажу меню',
-      'menu.capture.title': 'Сфотографировать рыбку',
-      'menu.capture.sub': 'раскрашенный лист оживает в аквариуме',
-      'menu.pack.title': 'Запустить готовую рыбку',
-      'menu.pack.sub': 'из набора, без раскрашивания',
-      'menu.feed.title': 'Покормить',
-      'menu.feed.sub': 'рыбки соберутся на корм',
-      'menu.print.title': 'Раскраски для печати',
-      'menu.print.sub': '12 видов рыбок на обычном листе A4',
-      'menu.bg.title': 'Сменить фон',
-      'menu.bg.sub': 'картинка, на фоне которой плавают рыбки',
-      'menu.fish.title': 'Убрать рыбок',
-      'menu.fish.sub': 'удалить лишних из аквариума',
-      'menu.fish.sub.pass': 'удалить лишних — нужен пароль',
-      'menu.home.title': 'Мои аквариумы',
-      'menu.home.sub': 'другие аквариумы — и завести новый',
-      'menu.picker.title': 'Кого запустить?',
-      'menu.picker.sub': 'Рыбка из набора появится в аквариуме сразу',
-      'menu.picker.drawing': 'рисую…',
-      'menu.picker.failed': 'не вышло',
-      'menu.picker.nopack': 'Набор не собран — запусти tools\\convert-pack.ps1',
-      'menu.rename.title': 'Название аквариума',
-      'menu.rename.text': 'Видно только тебе — в списке аквариумов и в заголовке этой страницы.',
-      'menu.rename.ok': 'Сохранить',
-      'menu.rename.fail': 'Не переименовалось',
-      'menu.access.title': 'Доступ к аквариуму',
-      'menu.access.text': 'По коду аквариум смотрят, по паролю им управляют. Оба сохранены в этом браузере — если почистить его данные, восстановить их будет негде.',
-      'menu.access.done': 'Готово',
-      'menu.access.change': 'Сменить пароль',
-      'menu.newpass.title': 'Новый пароль аквариума',
-      'menu.newpass.first': 'Пароль для аквариума',
-      'menu.newpass.text': 'От 4 знаков. Цифры удобнее: их диктуют по телефону и набирают на пульте. Старый пароль перестанет работать на всех устройствах.',
-      'menu.newpass.ph': 'новый пароль',
-      'menu.newpass.short.title': 'Слишком короткий',
-      'menu.newpass.short.text': 'Нужно хотя бы четыре знака.',
-      'menu.newpass.saved.title': 'Пароль сохранён',
-      'menu.newpass.saved.text': 'Запиши его: восстановить пароль негде. Код аквариума не менялся — по нему по-прежнему смотрят.',
-      'menu.newpass.saved.field': 'Новый пароль',
-      'menu.newpass.saved.ok': 'Записал',
-      'menu.oldpass.title': 'Старый пароль',
-      'menu.oldpass.text': 'Сменить пароль может тот, кто знает нынешний.',
-      'menu.fail.title': 'Не вышло',
-      'menu.fail.server': 'Сервер не отвечает.',
-      'menu.fail.pass': 'Сервер не принял пароль.',
-      'menu.link.title': 'Ссылка на аквариум',
-      'tank.doctitle': 'Аквариум',
-      'tank.frame.print': 'Раскраски для печати',
-      'tank.frame.bg': 'Фон аквариума',
-      'tank.frame.fish': 'Рыбки аквариума',
-      'tank.frame.capture': 'Съёмка рыбки',
-      'tank.crash': '<b>Сцена не запустилась</b><br>{msg}',
-      'menu.link.text': 'Скопировать сам не смог — забери отсюда. По ней аквариум откроется на любом устройстве.',
-      'menu.link.ok': 'Готово',
-      // «Открыть на другом экране»: телефон снимает, большой экран показывает —
-      // весь перенос между устройствами собран в одном пункте.
-      'menu.share.title': 'Открыть на другом экране',
-      'menu.share.sub': 'QR и ссылка: телевизор, планшет, второй телефон',
-      'menu.share.hint': 'Наведи камеру телефона — аквариум откроется там',
-      'menu.share.copy': 'Скопировать ссылку',
-      'menu.share.copy.sub': 'отправь её в мессенджер — и открой где угодно',
-      'menu.share.send': 'Отправить ссылку…',
-      'menu.share.send.sub': 'через то, чем ты обычно делишься',
-      'menu.share.pin': 'Код для телевизора',
-      'menu.share.pin.sub': 'пять цифр — их легко набрать пультом',
-      'menu.share.pin.text': 'Набери эти цифры на телевизоре — на главной странице, в поле «Открыть аквариум по коду». Код живёт 5 минут.',
-      'menu.share.pin.fail': 'Код не выдался — попробуй ещё раз',
-      // Витрина: общий аквариум для знакомства. Меню здесь урезано, чтобы
-      // гость не отправил рыбку ребёнка в чужой аквариум.
-      'demo.title': '🫧 Это витрина',
-      'demo.text': 'Общий аквариум для знакомства — рыбки тут ничьи. Свои живут в собственном аквариуме: завести его — секунда, раскраски и съёмка будут там.',
-      'demo.own': 'Завести свой аквариум',
-      'demo.own.sub': 'печать, съёмка и свои рыбки — там',
-
-      'tank.loading': 'Наполняю аквариум…',
-      'tank.nofish': 'рыбок пока нет',
-      'tank.notank': 'Аквариум не найден — возможно, его удалили или в коде опечатка.',
-      'tank.tolist': 'К моим аквариумам →',
-      'tank.noserver': 'Сервер недоступен. Запусти <code>node server.js</code> и обнови страницу.',
-      'tank.nopick': 'Не выбран аквариум.',
-      'tank.home': 'На главную →',
-
-      // ── съёмка ──
-      'cap.title': '🐠 Оживи свою рыбку!',
-      'cap.sub': 'Раскрась рыбку на листе, сфотографируй — и она поплывёт в аквариуме',
-      'cap.back': '← в аквариум',
-      'cap.shoot': 'Сфотографировать лист',
-      'cap.hint': 'Положи лист на стол, чтобы все четыре чёрных квадрата попали в кадр',
-      'cap.qr': 'Удобнее с телефона: наведи камеру на код — съёмка откроется там',
-      'cap.searching': 'Ищу рыбку на фото…',
-      'cap.reviving': 'рыбка оживает…',
-      'cap.release': 'Выпустить в аквариум! 🌊',
-      'cap.retake': 'Переснять',
-      'cap.boost': 'Ярче цвета',
-      'cap.done': 'Рыбка уплыла в аквариум!',
-      'cap.done.sub': 'Посмотри на большой экран — она уже там',
-      'cap.done.sub.embed': 'Закрой окно — она уже плавает',
-      'cap.again': 'Сфотографировать ещё одну',
-      'cap.retry': 'Попробовать ещё раз',
-      'cap.sending': 'Рыбка плывёт в аквариум…',
-      'cap.err.manifest': 'Не загрузился manifest.json — проверь, что сервер запущен.',
-      'cap.err.photo': 'Не удалось открыть фото, попробуй ещё раз.',
-      'cap.itis': 'Это {name}!',
-      'cap.photo': 'Твоя рыбка',
-      'cap.err.nofish': 'Рыбка потерялась — сфотографируй лист заново.',
-      'cap.err.status': 'Сервер ответил {code}',
-      'cap.err.markers': 'Нашёл меток: {n} из 4. Сфотографируй весь лист целиком, при хорошем свете и без бликов — все четыре чёрных квадрата должны быть в кадре.',
-      'cap.err.send': 'Не получилось отправить: {msg}',
-
-      // ── управление ──
-      'adm.doctitle': 'Аквариум — управление рыбками',
-      'adm.title': 'управление',
-      'adm.tank': 'Аквариум',
-      'adm.capture': 'Съёмка',
-      'adm.print': 'Раскраски',
-      'adm.home': 'Мои аквариумы',
-      'adm.pass': 'Пароль:',
-      'adm.pass.change': 'Сменить пароль',
-      'adm.pass.show': 'Показать пароль',
-      'adm.bg': 'Фон аквариума',
-      'adm.bg.one': 'Фон {n}',
-      'adm.bg.own': 'Свой фон',
-      'adm.bg.add': 'свой фон',
-      'adm.bg.busy': 'загружаю…',
-      'adm.bg.del': 'Удалить этот фон',
-      'adm.bg.del.title': 'Удалить фон?',
-      'adm.bg.del.text': 'Файл будет стёрт безвозвратно — в отличие от рыбок, копии не остаётся.',
-      'adm.bg.fail': 'Фон не загрузился',
-      'adm.bg.err.read': 'не удалось прочитать файл',
-      'adm.bg.err.img': 'это не картинка',
-      'adm.fish.count': 'рыбок: {n}',
-      'adm.fish.pack': 'из набора · ',
-      'adm.fish.del': 'Удалить',
-      'adm.fish.del.title': 'Удалить рыбку?',
-      'adm.fish.del.pack': 'Она уплывёт из аквариума. Запустить такую же можно снова в любой момент.',
-      'adm.fish.del.painted': 'Рисунок переедет в корзину на сервере — если что, его можно вернуть.',
-      'adm.empty': 'В аквариуме пока нет нарисованных рыбок.',
-      'adm.empty.sub': 'Раскрась лист и сфотографируй его с телефона — ссылка «Съёмка» наверху.',
-      'adm.clear': 'Удалить всех рыбок',
-      'adm.clear.title': 'Очистить аквариум?',
-      'adm.clear.text': 'Из аквариума уплывут все рыбки — {n} шт. Рисунки переедут в корзину на сервере, вернуть их можно, но из списка они пропадут.',
-      'adm.noserver': 'сервер недоступен — запусти node server.js',
-      'adm.gate.title': '🔒 Управление под паролем',
-      'adm.gate.text': 'Смотреть аквариум можно и без него — пароль нужен, чтобы менять фон, переименовывать и удалять рыбок.',
-      'adm.gate.ph': 'пароль',
-      'adm.gate.enter': 'Войти',
-      'adm.gate.back': '← в аквариум',
-      'adm.gate.bad': 'Пароль не подошёл.',
-      'adm.gate.old': 'Пароль устарел — введи новый.',
-      'adm.gate.many': 'Слишком много попыток, подожди минуту.',
-      'adm.gate.wait': 'Слишком много попыток. Подожди {n} с.',
-      'adm.gate.noserver': 'Сервер не отвечает.',
-      'adm.gate.need': 'Нужен пароль аквариума.',
-
-      // ── раскраски ──
-      'print.title': 'Раскраски — шаблоны для печати',
-      'print.home': '← мои аквариумы',
-      'print.all': 'Печать всех',
-      'print.one': 'Печать этого листа',
-      'print.note': 'Печатай на обычной А4 в альбомной ориентации, масштаб 100% (без «вписать в страницу») — размеры меток важны для распознавания. Чёрные квадраты в углах не закрашивать!',
-      'print.note2': 'Принтера рядом нет? В окне печати выбери «Сохранить как PDF» — файл можно отправить туда, где принтер найдётся. А пока запусти в аквариум готовую рыбку из меню.',
-      'print.nomanifest': 'Не загрузился manifest.json — проверь, что сервер запущен.',
-
-      // ── общее ──
-      'pass.ask.title': 'Пароль аквариума',
-      'pass.ask.text': 'Пароль спрашивают только на управление. Смотреть аквариум можно и без него.',
-      'pass.ask.ph': 'например, 481902',
-      'pass.ask.ok': 'Войти',
-      'pass.bad.title': 'Пароль не подошёл',
-      'pass.bad.text': 'Проверь пароль — тот, что показали при создании аквариума.',
-      'pass.many.title': 'Слишком много попыток',
-      'pass.many.text': 'Подожди {n} с и попробуй снова.',
-      'modal.cancel': 'Отмена',
-      'modal.delete': 'Удалить',
-      'modal.ok': 'Понятно',
-      'modal.save': 'Сохранить',
-      'modal.copyHint': 'Нажми, чтобы скопировать',
-      'modal.copied': 'скопировано'
-    },
-
     en: {
       'lang.name': 'English',
-
       'home.title': 'My aquariums',
       'home.lead': 'Print a sheet, colour it with markers, take a photo — and the fish starts swimming. Every child can have their own aquarium.',
       'home.empty': 'No aquariums yet. Create the first one — it takes a second.',
@@ -299,7 +33,6 @@
       'terms.back': '← to the aquariums',
       'home.footer.important': 'Important.',
       'home.footer.text': ' No accounts: the code is for watching, the password is for managing, and this browser keeps both. Details — in the terms.',
-
       'home.create.title': 'New aquarium',
       'home.create.text': 'Give it a name so you can tell it apart in the list — your child’s name works well.',
       'home.create.value': 'Aquarium',
@@ -321,7 +54,6 @@
       'home.remove.pass.text': 'Deleting an aquarium for good needs the password. Without it, just remove the aquarium from your list — it stays with its owner.',
       'home.badcode.title': 'That code does not fit',
       'home.badcode.text': 'An aquarium code is exactly 10 characters, letters and digits. Check whether one got lost.',
-
       'menu.tank': 'Aquarium',
       'menu.copied': 'link copied',
       'menu.pass': '🔑 password',
@@ -398,7 +130,6 @@
       'demo.text': 'A shared aquarium for a first look — the fish here belong to no one. Your own fish live in your own aquarium: starting one takes a second, and the sheets and shooting are there.',
       'demo.own': 'Start your own aquarium',
       'demo.own.sub': 'printing, shooting and your own fish live there',
-
       'tank.loading': 'Filling the aquarium…',
       'tank.nofish': 'no fish yet',
       'tank.notank': 'Aquarium not found — it may have been deleted, or the code has a typo.',
@@ -406,7 +137,6 @@
       'tank.noserver': 'The server is unreachable. Run <code>node server.js</code> and refresh the page.',
       'tank.nopick': 'No aquarium selected.',
       'tank.home': 'To the home page →',
-
       'cap.title': '🐠 Bring your fish to life!',
       'cap.sub': 'Colour the fish on the sheet, take a photo — and it will swim in the aquarium',
       'cap.back': '← to the aquarium',
@@ -432,7 +162,6 @@
       'cap.err.status': 'The server answered {code}',
       'cap.err.markers': 'Found {n} markers out of 4. Photograph the whole sheet, in good light and without glare — all four black squares have to be in the frame.',
       'cap.err.send': 'Sending failed: {msg}',
-
       'adm.doctitle': 'Aquarium — managing the fish',
       'adm.title': 'management',
       'adm.tank': 'Aquarium',
@@ -476,7 +205,6 @@
       'adm.gate.wait': 'Too many attempts. Wait {n} s.',
       'adm.gate.noserver': 'The server is not responding.',
       'adm.gate.need': 'The aquarium password is needed.',
-
       'print.title': 'Colouring sheets — ready to print',
       'print.home': '← my aquariums',
       'print.all': 'Print all',
@@ -484,7 +212,6 @@
       'print.note': 'Print on plain A4 in landscape at 100% scale (not “fit to page”) — the marker size matters for recognition. Do not colour the black squares in the corners!',
       'print.note2': 'No printer around? Pick “Save as PDF” in the print dialog — the file can travel to wherever a printer lives. Meanwhile, release a ready-made fish from the menu.',
       'print.nomanifest': 'manifest.json did not load — check that the server is running.',
-
       'pass.ask.title': 'Aquarium password',
       'pass.ask.text': 'The password is only asked for managing. Watching the aquarium needs none.',
       'pass.ask.ph': 'for example, 481902',
@@ -503,7 +230,6 @@
 
     pl: {
       'lang.name': 'Polski',
-
       'home.title': 'Moje akwaria',
       'home.lead': 'Wydrukuj szablon, pokoloruj mazakami, zrób zdjęcie — i rybka popłynie. Każde dziecko może mieć własne akwarium.',
       'home.empty': 'Jeszcze żadnego akwarium. Załóż pierwsze — to chwila.',
@@ -530,7 +256,6 @@
       'terms.back': '← do akwariów',
       'home.footer.important': 'Ważne.',
       'home.footer.text': ' Nie ma kont: kodem się ogląda, hasłem zarządza, a oba trzyma ta przeglądarka. Szczegóły — w zasadach.',
-
       'home.create.title': 'Nowe akwarium',
       'home.create.text': 'Nazwij je, żeby odróżnić na liście — na przykład imieniem dziecka.',
       'home.create.value': 'Akwarium',
@@ -552,7 +277,6 @@
       'home.remove.pass.text': 'Usunięcie akwarium całkiem wymaga hasła. Jeśli go nie masz — usuń akwarium ze swojej listy, u właściciela zostanie.',
       'home.badcode.title': 'Ten kod nie pasuje',
       'home.badcode.text': 'Kod akwarium ma dokładnie 10 znaków, litery i cyfry. Sprawdź, czy któryś nie zginął.',
-
       'menu.tank': 'Akwarium',
       'menu.copied': 'link skopiowany',
       'menu.pass': '🔑 hasło',
@@ -629,7 +353,6 @@
       'demo.text': 'Wspólne akwarium na pierwszy rzut oka — te rybki są niczyje. Własne rybki mieszkają we własnym akwarium: założenie go to sekunda, a kolorowanki i zdjęcia są tam.',
       'demo.own': 'Załóż własne akwarium',
       'demo.own.sub': 'druk, zdjęcia i własne rybki — tam',
-
       'tank.loading': 'Napełniam akwarium…',
       'tank.nofish': 'jeszcze bez rybek',
       'tank.notank': 'Nie znaleziono akwarium — mogło zostać usunięte albo w kodzie jest literówka.',
@@ -637,7 +360,6 @@
       'tank.noserver': 'Serwer niedostępny. Uruchom <code>node server.js</code> i odśwież stronę.',
       'tank.nopick': 'Nie wybrano akwarium.',
       'tank.home': 'Na stronę główną →',
-
       'cap.title': '🐠 Ożyw swoją rybkę!',
       'cap.sub': 'Pokoloruj rybkę na kartce, zrób zdjęcie — a popłynie w akwarium',
       'cap.back': '← do akwarium',
@@ -661,9 +383,8 @@
       'cap.photo': 'Twoja rybka',
       'cap.err.nofish': 'Rybka się zgubiła — zrób zdjęcie kartki jeszcze raz.',
       'cap.err.status': 'Serwer odpowiedział {code}',
-      'cap.err.markers': 'Znalazłem {n} znaczniki z 4. Sfotografuj całą kartkę, przy dobrym świetle i bez odblasków — wszystkie cztery czarne kwadraty muszą być w kadrze.',
+      'cap.err.markers': 'Znaleziono {n} znaczników z 4. Sfotografuj całą kartkę, przy dobrym świetle i bez odblasków — wszystkie cztery czarne kwadraty muszą być w kadrze.',
       'cap.err.send': 'Nie udało się wysłać: {msg}',
-
       'adm.doctitle': 'Akwarium — zarządzanie rybkami',
       'adm.title': 'zarządzanie',
       'adm.tank': 'Akwarium',
@@ -707,7 +428,6 @@
       'adm.gate.wait': 'Za dużo prób. Poczekaj {n} s.',
       'adm.gate.noserver': 'Serwer nie odpowiada.',
       'adm.gate.need': 'Potrzebne jest hasło akwarium.',
-
       'print.title': 'Kolorowanki — szablony do druku',
       'print.home': '← moje akwaria',
       'print.all': 'Drukuj wszystkie',
@@ -715,7 +435,6 @@
       'print.note': 'Drukuj na zwykłym A4 poziomo, w skali 100% (bez „dopasuj do strony”) — rozmiar znaczników jest ważny dla rozpoznawania. Czarnych kwadratów w rogach nie kolorujemy!',
       'print.note2': 'Nie ma drukarki pod ręką? W oknie drukowania wybierz „Zapisz jako PDF” — plik dojedzie tam, gdzie drukarka jest. A na razie wypuść z menu gotową rybkę.',
       'print.nomanifest': 'Nie wczytał się manifest.json — sprawdź, czy serwer działa.',
-
       'pass.ask.title': 'Hasło akwarium',
       'pass.ask.text': 'Hasło jest potrzebne tylko do zarządzania. Oglądać można bez niego.',
       'pass.ask.ph': 'na przykład 481902',
@@ -733,18 +452,13 @@
     }
   };
 
-  // Множественное число. В русском и польском три формы, в английском две.
-  // Считаем сами: Intl.PluralRules есть не везде, где эта игра запускается,
-  // а правил тут всего два языка.
   var PLURALS = {
-    ru: { fish: ['рыбка', 'рыбки', 'рыбок'] },
     pl: { fish: ['rybka', 'rybki', 'rybek'] },
     en: { fish: ['fish', 'fish', 'fish'] }
   };
 
   function pluralIndex(lang, n) {
     if (lang === 'en') return n === 1 ? 0 : 1;
-    // русский и польский: 1 — одна, 2–4 — две, остальное — много
     var t = n % 10, h = n % 100;
     if (t === 1 && h !== 11) return 0;
     if (t >= 2 && t <= 4 && (h < 12 || h > 14)) return 1;
@@ -753,17 +467,12 @@
 
   function pick() {
     var saved;
-    try { saved = localStorage.getItem(KEY); } catch (e) { /* приватный режим */ }
+    try { saved = localStorage.getItem(KEY); } catch (e) {}
     if (saved && DICT[saved]) return saved;
-
-    // Настройки устройства: ru-RU → русский, pl-PL → польский, остальное —
-    // английский как язык по умолчанию для всех прочих.
-    var list = (navigator.languages && navigator.languages.length)
-      ? navigator.languages : [navigator.language || 'en'];
+    var list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'en'];
     for (var i = 0; i < list.length; i++) {
       var code = String(list[i]).slice(0, 2).toLowerCase();
       if (DICT[code]) return code;
-      if (code === 'be' || code === 'uk' || code === 'kk') return 'ru';   // соседи по алфавиту
     }
     return 'en';
   }
@@ -771,7 +480,7 @@
   var lang = pick();
 
   function t(key, vars) {
-    var s = (DICT[lang] && DICT[lang][key]) || DICT.ru[key] || key;
+    var s = (DICT[lang] && DICT[lang][key]) || DICT.en[key] || key;
     if (!vars) return s;
     return s.replace(/\{(\w+)\}/g, function (m, name) {
       return vars[name] === undefined ? m : vars[name];
@@ -779,40 +488,28 @@
   }
 
   function plural(n, what) {
-    var forms = (PLURALS[lang] || PLURALS.ru)[what];
+    var forms = (PLURALS[lang] || PLURALS.en)[what];
     return n + ' ' + forms[pluralIndex(lang, n)];
   }
 
   function apply(root) {
     root = root || document;
-    root.querySelectorAll('[data-t]').forEach(function (el) {
-      el.textContent = t(el.getAttribute('data-t'));
-    });
-    root.querySelectorAll('[data-t-html]').forEach(function (el) {
-      el.innerHTML = t(el.getAttribute('data-t-html'));
-    });
-    root.querySelectorAll('[data-t-ph]').forEach(function (el) {
-      el.placeholder = t(el.getAttribute('data-t-ph'));
-    });
-    root.querySelectorAll('[data-t-title]').forEach(function (el) {
-      el.title = t(el.getAttribute('data-t-title'));
-    });
-    root.querySelectorAll('[data-t-alt]').forEach(function (el) {
-      el.alt = t(el.getAttribute('data-t-alt'));
-    });
+    root.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+    root.querySelectorAll('[data-t-html]').forEach(function (el) { el.innerHTML = t(el.getAttribute('data-t-html')); });
+    root.querySelectorAll('[data-t-ph]').forEach(function (el) { el.placeholder = t(el.getAttribute('data-t-ph')); });
+    root.querySelectorAll('[data-t-title]').forEach(function (el) { el.title = t(el.getAttribute('data-t-title')); });
+    root.querySelectorAll('[data-t-alt]').forEach(function (el) { el.alt = t(el.getAttribute('data-t-alt')); });
     if (document.documentElement) document.documentElement.lang = lang;
   }
 
   function set(next) {
     if (!DICT[next] || next === lang) return;
     lang = next;
-    try { localStorage.setItem(KEY, next); } catch (e) { /* приватный режим */ }
+    try { localStorage.setItem(KEY, next); } catch (e) {}
     apply(document);
     window.dispatchEvent(new CustomEvent('aqua:lang', { detail: next }));
   }
 
-  // Переключатель: три коротких кнопки. Место занимает мало, а объяснять
-  // ничего не надо — RU EN PL читается на любом из трёх языков.
   function mount(host) {
     if (!host) return null;
     host.classList.add('langpick');
@@ -836,10 +533,8 @@
     return host;
   }
 
-  // Соседние вкладки и врезки внутри меню аквариума: язык поменяли в одном
-  // месте — меняется везде, где открыт тот же сайт.
   window.addEventListener('storage', function (e) {
-    if (e.key !== KEY || !e.newValue || e.newValue === lang) return;
+    if (e.key !== KEY || !e.newValue || e.newValue === lang || !DICT[e.newValue]) return;
     lang = e.newValue;
     apply(document);
     window.dispatchEvent(new CustomEvent('aqua:lang', { detail: lang }));
@@ -855,7 +550,6 @@
     langs: LANGS
   };
 
-  // Раскладываем переводы, как только разметка готова.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { apply(document); });
   } else {
