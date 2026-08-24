@@ -1,0 +1,118 @@
+name: Repair camera marker detection
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Apply repairs when marker is present
+        shell: bash
+        run: |
+          if [ ! -f .repair-camera-marker ]; then
+            echo "No repair marker, nothing to do."
+            exit 0
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          server = Path('server.js')
+          text = server.read_text(encoding='utf-8')
+          replacements = {
+              'console.log(`корзина: удалено безвозвратно ${gone} шт. старше ${TRASH_DAYS} дней`);': 'console.log(`Trash: permanently removed ${gone} item(s) older than ${TRASH_DAYS} days`);',
+              'console.log(`пароль аквариума ${t.id} изменён`);': 'console.log(`Tank password changed: ${t.id}`);',
+              'console.log(`- аквариум ${t.id} → в корзину (data/trash-tanks)`);': 'console.log(`- tank ${t.id} moved to trash (data/trash-tanks)`);',
+              'console.log(`+ рыбка из пака ${model.name} в ${t.id} — всего ${listFish(t).length}`);': 'console.log(`+ pack fish ${model.name} added to ${t.id} — total ${listFish(t).length}`);',
+              'console.log(`+ рыбка ${data.kind} в ${t.id} (${Math.round(png.length / 1024)} КБ) — всего ${listFish(t).length}`);': 'console.log(`+ fish ${data.kind} added to ${t.id} (${Math.round(png.length / 1024)} KB) — total ${listFish(t).length}`);',
+              'console.log(`- рыбка ${delMatch[1]} из ${t.id} → в корзину`);': 'console.log(`- fish ${delMatch[1]} from ${t.id} moved to trash`);',
+              'console.log(`аквариум ${t.id} очищен, ${list.length} рыбок → в корзину`);': 'console.log(`tank ${t.id} cleared, ${list.length} fish moved to trash`);',
+              'console.log(`+ фон ${name} в ${t.id} (${Math.round(buf.length / 1024)} КБ)`);': 'console.log(`+ background ${name} added to ${t.id} (${Math.round(buf.length / 1024)} KB)`);',
+              'console.log(`- фон ${name} из ${t.id} удалён`);': 'console.log(`- background ${name} removed from ${t.id}`);',
+              'console.log(`🐟 корм насыпан в ${t.id}`);': 'console.log(`🐟 fish fed in ${t.id}`);',
+              'console.log(`+ аквариум «${meta.name}» (${id}), фон ${background}`);': 'console.log(`+ tank "${meta.name}" (${id}), background ${background}`);',
+              'console.log(`Аквариумы: http://localhost:${PORT}/`);': 'console.log(`Aquariums: http://localhost:${PORT}/`);',
+              'console.log(`С телефона (Wi-Fi ${name}): http://${net.address}:${PORT}/`);': 'console.log(`Phone (Wi-Fi ${name}): http://${net.address}:${PORT}/`);',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Missing expected server text: {old}')
+              text = text.replace(old, new)
+          server.write_text(text, encoding='utf-8')
+
+          capture = Path('assets/capture.js')
+          text = capture.read_text(encoding='utf-8')
+          pattern = re.compile(r'  function quadOf\(pts\) \{.*?\n  \}\n\n  // ── метки', re.S)
+          replacement = r'''  // Normalize a detected marker quad to TL, TR, BR, BL order.
+  // The previous implementation returned the four hull points in an arbitrary
+  // order, which made marker sampling depend on the winning hull pair.
+  function orderQuad(q) {
+    var tl = q[0], tr = q[0], br = q[0], bl = q[0];
+    var minSum = q[0][0] + q[0][1], maxSum = minSum;
+    var maxDiff = q[0][0] - q[0][1], minDiff = maxDiff;
+    for (var i = 1; i < q.length; i++) {
+      var x = q[i][0], y = q[i][1], sum = x + y, diff = x - y;
+      if (sum < minSum) { minSum = sum; tl = q[i]; }
+      if (sum > maxSum) { maxSum = sum; br = q[i]; }
+      if (diff > maxDiff) { maxDiff = diff; tr = q[i]; }
+      if (diff < minDiff) { minDiff = diff; bl = q[i]; }
+    }
+    return [tl, tr, br, bl];
+  }
+
+  function quadOf(pts) {
+    var h = hull(pts);
+    if (h.length < 4) return null;
+    var best = null, bestArea = 0;
+    for (var a = 0; a < h.length; a++) {
+      for (var b = a + 1; b < h.length; b++) {
+        var dx = h[b][0] - h[a][0], dy = h[b][1] - h[a][1];
+        var cMax = 0, cPt = null, dMax = 0, dPt = null;
+        for (var k = 0; k < h.length; k++) {
+          var cr = (h[k][0] - h[a][0]) * dy - (h[k][1] - h[a][1]) * dx;
+          if (cr > cMax) { cMax = cr; cPt = h[k]; }
+          if (-cr > dMax) { dMax = -cr; dPt = h[k]; }
+        }
+        if (cPt && dPt) {
+          var area = (cMax + dMax) / 2;
+          if (area > bestArea) { bestArea = area; best = [h[a], cPt, h[b], dPt]; }
+        }
+      }
+    }
+    return best ? orderQuad(best) : null;
+  }
+
+  // ── метки'''
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit('Could not replace capture.js quadOf function')
+          old_tries = 'var tries = [0.55, 0.45, 0.65, 0.72, 0.38];'
+          new_tries = 'var tries = [0.55, 0.45, 0.65, 0.72, 0.38, 0.82, 0.30];'
+          if old_tries not in text:
+              raise SystemExit('Missing expected capture threshold list')
+          capture.write_text(text.replace(old_tries, new_tries, 1), encoding='utf-8')
+          PY
+
+          node --check server.js
+          node --check assets/capture.js
+          git diff --check
+
+          rm .repair-camera-marker
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server.js assets/capture.js .repair-camera-marker
+          git commit -m "Fix marker detection and server console language"
+          git push
