@@ -1,7 +1,7 @@
 {
-  "name": "paper-aquarium",
+  "name": "pp-aqua",
   "version": "1.0.0",
-  "description": "Paper Aquarium: a child colours a printed sheet, photographs it — and the fish swims in a 3D scene",
+  "description": "PP Aqua: turn a coloured paper fish into a swimming 3D fish",
   "license": "MIT",
   "private": true,
   "type": "commonjs",
