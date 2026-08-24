@@ -1,26 +1,127 @@
 (function () {
   'use strict';
 
+  var KEY = 'aqua.lang';
   var LANGS = ['en', 'pl'];
-  var STORAGE_KEY = 'aqua.lang';
 
   var DICT = {
     en: {
-      'app.title': 'Paper Aquarium',
-      'app.subtitle': 'Colour a fish. Take a photo. Watch it swim.',
-      'home.create': 'Create an aquarium',
-      'home.open': 'Open an aquarium',
-      'home.code': 'Aquarium code',
-      'home.continue': 'Continue',
-      'home.demo': 'View demo aquarium',
-      'home.about': 'How it works',
-      'menu.capture': 'Bring a fish to life',
-      'menu.print': 'Print colouring sheets',
-      'menu.share': 'Share aquarium',
-      'menu.admin': 'Manage aquarium',
-      'menu.home': 'My aquariums',
-      'menu.copy': 'Copy link',
-      'menu.copy.ok': 'Copied!',
+      'lang.name': 'English',
+      'home.title': 'My aquariums',
+      'home.lead': 'Print a sheet, colour it with markers, take a photo — and the fish starts swimming. Every child can have their own aquarium.',
+      'home.empty': 'No aquariums yet. Create the first one — it takes a second.',
+      'home.new': 'New aquarium',
+      'home.bycode.title': 'Open an aquarium by code',
+      'home.bycode.hint': 'The code is only needed on a new device — this one remembers your aquariums. Five digits from “Open on another screen” work too.',
+      'home.pin.bad.title': 'Those digits did not fit',
+      'home.pin.bad.text': 'A five-digit code lives for 5 minutes — it may have expired. Ask for a fresh one: “Open on another screen” → “TV code” on the phone.',
+      'home.pin.many.title': 'Too many attempts',
+      'home.pin.many.text': 'Wait a little and try again.',
+      'home.bycode.placeholder': 'for example, mk4dp7wq2f',
+      'home.bycode.open': 'Open',
+      'home.how.title': 'How it works',
+      'home.how.s0': 'Create an aquarium',
+      'home.how.s1': 'Print a colouring sheet',
+      'home.how.s2': 'Colour it with markers',
+      'home.how.s3': 'Photograph it with a phone',
+      'home.how.s4': 'Open on a big screen with a code',
+      'home.how.demo': '🐠 Peek at a live aquarium',
+      'home.how.demo.sub': 'a shared showcase — fish already swimming',
+      'home.card.kill': 'Remove aquarium',
+      'home.card.empty': 'empty so far',
+      'home.terms': 'Terms and data ↗',
+      'terms.back': '← to the aquariums',
+      'home.footer.important': 'Important.',
+      'home.footer.text': ' No accounts: the code is for watching, the password is for managing, and this browser keeps both. Details — in the terms.',
+      'home.create.title': 'New aquarium',
+      'home.create.text': 'Give it a name so you can tell it apart in the list — your child’s name works well.',
+      'home.create.value': 'Aquarium',
+      'home.create.ok': 'Create',
+      'home.created.title': 'Aquarium created',
+      'home.created.text': 'The code opens the aquarium for watching, the password lets you manage it. Both are already saved on this device — they live in the aquarium menu, no need to write them down right now. Still, keep a copy somewhere: there is no email and no account here, so there is nowhere to recover them from.',
+      'home.created.code': 'Aquarium code',
+      'home.created.pass': 'Password',
+      'home.created.ok': 'Saved, let’s go',
+      'home.create.fail.title': 'Could not create the aquarium',
+      'home.create.fail.text': 'The server is not responding. Check that node server.js is running.',
+      'home.remove.title': 'Remove “{name}”?',
+      'home.remove.text': 'From the list — the aquarium stays on the server, you can bring it back with the code {code}. For good — {what} move to the server’s bin, and the code stops working.',
+      'home.remove.whatEmpty': 'the aquarium moves',
+      'home.remove.cancel': 'Cancel',
+      'home.remove.forget': 'Remove from my list',
+      'home.remove.delete': 'Delete the aquarium for good',
+      'home.remove.pass.title': 'Password for “{name}”',
+      'home.remove.pass.text': 'Deleting an aquarium for good needs the password. Without it, just remove the aquarium from your list — it stays with its owner.',
+      'home.badcode.title': 'That code does not fit',
+      'home.badcode.text': 'An aquarium code is exactly 10 characters, letters and digits. Check whether one got lost.',
+      'menu.tank': 'Aquarium',
+      'menu.copied': 'link copied',
+      'menu.pass': '🔑 password',
+      'menu.pass.set': '🔓 set a password',
+      'menu.pass.title': 'Aquarium password',
+      'menu.rename.hint': 'Rename the aquarium',
+      'menu.close': 'Close the menu',
+      'menu.back': '← back',
+      'menu.hint': 'tap anywhere — the menu will show up',
+      'menu.capture.title': 'Photograph a fish',
+      'menu.capture.sub': 'a coloured sheet comes alive in the aquarium',
+      'menu.pack.title': 'Release a ready-made fish',
+      'menu.pack.sub': 'from the set, no colouring needed',
+      'menu.feed.title': 'Feed them',
+      'menu.feed.sub': 'the fish will gather around the food',
+      'menu.print.title': 'Colouring sheets to print',
+      'menu.print.sub': '12 kinds of fish on a plain A4 sheet',
+      'menu.bg.title': 'Change the background',
+      'menu.bg.sub': 'the picture the fish swim against',
+      'menu.fish.title': 'Remove fish',
+      'menu.fish.sub': 'take the extra ones out of the aquarium',
+      'menu.fish.sub.pass': 'take the extra ones out — password needed',
+      'menu.home.title': 'My aquariums',
+      'menu.home.sub': 'other aquariums — and starting a new one',
+      'menu.picker.title': 'Who shall we release?',
+      'menu.picker.sub': 'A fish from the set appears in the aquarium right away',
+      'menu.picker.drawing': 'drawing…',
+      'menu.picker.failed': 'did not work',
+      'menu.picker.nopack': 'The set is not built — run tools\\convert-pack.ps1',
+      'menu.rename.title': 'Aquarium name',
+      'menu.rename.text': 'Only you see it — in the list of aquariums and in this page’s title.',
+      'menu.rename.ok': 'Save',
+      'menu.rename.fail': 'Renaming failed',
+      'menu.access.title': 'Access to the aquarium',
+      'menu.access.text': 'The code is for watching, the password is for managing. Both are saved in this browser — if you clear its data, there is nowhere to recover them from.',
+      'menu.access.done': 'Done',
+      'menu.access.change': 'Change the password',
+      'menu.newpass.title': 'New aquarium password',
+      'menu.newpass.first': 'Password for the aquarium',
+      'menu.newpass.text': 'At least 4 characters. Digits are handier: they are easy to read out over the phone and to type on a TV remote. The old password stops working on every device.',
+      'menu.newpass.ph': 'new password',
+      'menu.newpass.short.title': 'Too short',
+      'menu.newpass.short.text': 'Four characters at the very least.',
+      'menu.newpass.saved.title': 'Password saved',
+      'menu.newpass.saved.text': 'Write it down: there is nowhere to recover it from. The aquarium code has not changed — it still works for watching.',
+      'menu.newpass.saved.field': 'New password',
+      'menu.newpass.saved.ok': 'Written down',
+      'menu.oldpass.title': 'Current password',
+      'menu.oldpass.text': 'Only someone who knows the current password can change it.',
+      'menu.fail.title': 'Did not work',
+      'menu.fail.server': 'The server is not responding.',
+      'menu.fail.pass': 'The server did not accept the password.',
+      'menu.link.title': 'Link to the aquarium',
+      'tank.doctitle': 'Aquarium',
+      'tank.frame.print': 'Colouring sheets for printing',
+      'tank.frame.bg': 'Aquarium background',
+      'tank.frame.fish': 'Fish in the aquarium',
+      'tank.frame.capture': 'Photographing a fish',
+      'tank.crash': '<b>The scene did not start</b><br>{msg}',
+      'menu.link.text': 'Could not copy it myself — take it from here. It opens the aquarium on any device.',
+      'menu.link.ok': 'Done',
+      'menu.share.title': 'Open on another screen',
+      'menu.share.sub': 'QR and link: a TV, a tablet, another phone',
+      'menu.share.hint': 'Point a phone camera here — the aquarium opens there',
+      'menu.share.copy': 'Copy the link',
+      'menu.share.copy.sub': 'send it to a messenger — and open it anywhere',
+      'menu.share.send': 'Send the link…',
+      'menu.share.send.sub': 'through whatever you usually share with',
       'menu.share.pin': 'TV code',
       'menu.share.pin.sub': 'five digits — easy to type with a remote',
       'menu.share.pin.text': 'Type these digits on the TV — on the home page, in the “Open an aquarium by code” field. The code lives for 5 minutes.',
@@ -79,36 +180,177 @@
       'adm.pass.show': 'Show the password',
       'adm.bg': 'Aquarium background',
       'adm.bg.one': 'Background {n}',
-      'adm.save': 'Save',
-      'adm.saved': 'Saved',
-      'adm.delete': 'Delete aquarium',
-      'adm.delete.confirm': 'Delete this aquarium? This cannot be undone.',
-      'adm.logout': 'Log out',
-      'print.title': 'Colouring sheets',
-      'print.sub': 'Print at 100%. Do not scale to fit.',
-      'print.back': '← to the aquarium',
-      'print.print': 'Print',
-      'print.sheet': 'Colour this fish',
-      'print.tip': 'Keep all four black squares visible when you take the photo.',
-      'common.loading': 'Loading…',
-      'common.error': 'Something went wrong.'
+      'adm.bg.own': 'Your own',
+      'adm.bg.add': 'your own',
+      'adm.bg.busy': 'uploading…',
+      'adm.bg.del': 'Delete this background',
+      'adm.bg.del.title': 'Delete the background?',
+      'adm.bg.del.text': 'The file will be erased for good — unlike fish, no copy is kept.',
+      'adm.bg.fail': 'The background did not upload',
+      'adm.bg.err.read': 'could not read the file',
+      'adm.bg.err.img': 'this is not a picture',
+      'adm.fish.count': 'fish: {n}',
+      'adm.fish.pack': 'from the set · ',
+      'adm.fish.del': 'Delete',
+      'adm.fish.del.title': 'Delete the fish?',
+      'adm.fish.del.pack': 'It will swim away. You can release the same one again any time.',
+      'adm.fish.del.painted': 'The drawing moves to the bin on the server — it can be brought back.',
+      'adm.empty': 'No drawn fish in this aquarium yet.',
+      'adm.empty.sub': 'Colour a sheet and photograph it with a phone — the “Camera” link is at the top.',
+      'adm.clear': 'Delete all the fish',
+      'adm.clear.title': 'Empty the aquarium?',
+      'adm.clear.text': 'Every fish will swim away — {n} of them. The drawings move to the bin on the server; they can be brought back, but they disappear from this list.',
+      'adm.noserver': 'server unreachable — run node server.js',
+      'adm.gate.title': '🔒 Management needs a password',
+      'adm.gate.text': 'Watching the aquarium does not — the password is for changing the background, renaming and removing fish.',
+      'adm.gate.ph': 'password',
+      'adm.gate.enter': 'Enter',
+      'adm.gate.back': '← to the aquarium',
+      'adm.gate.bad': 'That password does not fit.',
+      'adm.gate.old': 'The password is out of date — enter the new one.',
+      'adm.gate.many': 'Too many attempts, wait a minute.',
+      'adm.gate.wait': 'Too many attempts. Wait {n} s.',
+      'adm.gate.noserver': 'The server is not responding.',
+      'adm.gate.need': 'The aquarium password is needed.',
+      'print.title': 'Colouring sheets — ready to print',
+      'print.home': '← my aquariums',
+      'print.all': 'Print all',
+      'print.one': 'Print this sheet',
+      'print.note': 'Print on plain A4 in landscape at 100% scale (not “fit to page”) — the marker size matters for recognition. Do not colour the black squares in the corners!',
+      'print.note2': 'No printer around? Pick “Save as PDF” in the print dialog — the file can travel to wherever a printer lives. Meanwhile, release a ready-made fish from the menu.',
+      'print.nomanifest': 'manifest.json did not load — check that the server is running.',
+      'pass.ask.title': 'Aquarium password',
+      'pass.ask.text': 'The password is only asked for managing. Watching the aquarium needs none.',
+      'pass.ask.ph': 'for example, 481902',
+      'pass.ask.ok': 'Enter',
+      'pass.bad.title': 'That password does not fit',
+      'pass.bad.text': 'Check the password — the one shown when the aquarium was created.',
+      'pass.many.title': 'Too many attempts',
+      'pass.many.text': 'Wait {n} s and try again.',
+      'modal.cancel': 'Cancel',
+      'modal.delete': 'Delete',
+      'modal.ok': 'Got it',
+      'modal.save': 'Save',
+      'modal.copyHint': 'Click to copy',
+      'modal.copied': 'copied'
     },
     pl: {
-      'app.title': 'Akwarium z papieru',
-      'app.subtitle': 'Pokoloruj rybkę. Zrób zdjęcie. Patrz, jak pływa.',
-      'home.create': 'Załóż akwarium',
-      'home.open': 'Otwórz akwarium',
-      'home.code': 'Kod akwarium',
-      'home.continue': 'Dalej',
-      'home.demo': 'Zobacz akwarium demonstracyjne',
-      'home.about': 'Jak to działa',
-      'menu.capture': 'Ożyw rybkę',
-      'menu.print': 'Drukuj kolorowanki',
-      'menu.share': 'Udostępnij akwarium',
-      'menu.admin': 'Zarządzaj akwarium',
-      'menu.home': 'Moje akwaria',
-      'menu.copy': 'Kopiuj link',
-      'menu.copy.ok': 'Skopiowano!',
+      'lang.name': 'Polski',
+      'home.title': 'Moje akwaria',
+      'home.lead': 'Wydrukuj szablon, pokoloruj mazakami, zrób zdjęcie — i rybka popłynie. Każde dziecko może mieć własne akwarium.',
+      'home.empty': 'Jeszcze żadnego akwarium. Załóż pierwsze — to chwila.',
+      'home.new': 'Nowe akwarium',
+      'home.bycode.title': 'Otwórz akwarium kodem',
+      'home.bycode.hint': 'Kod przydaje się tylko na nowym urządzeniu — to zapamiętuje akwaria samo. Zadziała też pięć cyfr z „Otwórz na innym ekranie”.',
+      'home.pin.bad.title': 'Te cyfry nie pasują',
+      'home.pin.bad.text': 'Pięciocyfrowy kod żyje 5 minut — mógł wygasnąć. Poproś o nowy: „Otwórz na innym ekranie” → „Kod dla telewizora” na telefonie.',
+      'home.pin.many.title': 'Za dużo prób',
+      'home.pin.many.text': 'Odczekaj chwilę i spróbuj ponownie.',
+      'home.bycode.placeholder': 'na przykład mk4dp7wq2f',
+      'home.bycode.open': 'Otwórz',
+      'home.how.title': 'Jak to działa',
+      'home.how.s0': 'Załóż akwarium',
+      'home.how.s1': 'Wydrukuj kolorowankę',
+      'home.how.s2': 'Pokoloruj ją flamastrami',
+      'home.how.s3': 'Sfotografuj telefonem',
+      'home.how.s4': 'Otwórz na dużym ekranie kodem',
+      'home.how.demo': '🐠 Zobacz żywe akwarium',
+      'home.how.demo.sub': 'wspólna witryna — rybki już pływają',
+      'home.card.kill': 'Usuń akwarium',
+      'home.card.empty': 'na razie pusto',
+      'home.terms': 'Zasady i dane ↗',
+      'terms.back': '← do akwariów',
+      'home.footer.important': 'Ważne.',
+      'home.footer.text': ' Nie ma kont: kodem się ogląda, hasłem zarządza, a oba trzyma ta przeglądarka. Szczegóły — w zasadach.',
+      'home.create.title': 'Nowe akwarium',
+      'home.create.text': 'Nazwij je, żeby odróżnić na liście — na przykład imieniem dziecka.',
+      'home.create.value': 'Akwarium',
+      'home.create.ok': 'Utwórz',
+      'home.created.title': 'Akwarium utworzone',
+      'home.created.text': 'Kodem otwiera się akwarium do oglądania, hasłem się nim zarządza. Na tym urządzeniu oba są już zapisane — znajdziesz je w menu akwarium, nie musisz ich teraz notować. Ale gdzieś je zachowaj: nie ma tu poczty ani konta, więc nie będzie skąd ich odzyskać.',
+      'home.created.code': 'Kod akwarium',
+      'home.created.pass': 'Hasło',
+      'home.created.ok': 'Zapisane, płyniemy',
+      'home.create.fail.title': 'Nie udało się utworzyć akwarium',
+      'home.create.fail.text': 'Serwer nie odpowiada. Sprawdź, czy działa node server.js.',
+      'home.remove.title': 'Usunąć „{name}”?',
+      'home.remove.text': 'Z listy — akwarium zostaje na serwerze, wrócisz do niego kodem {code}. Całkiem — {what} trafią do kosza na serwerze, a kod przestanie działać.',
+      'home.remove.whatEmpty': 'akwarium trafi',
+      'home.remove.cancel': 'Anuluj',
+      'home.remove.forget': 'Usuń z mojej listy',
+      'home.remove.delete': 'Usuń akwarium całkiem',
+      'home.remove.pass.title': 'Hasło do „{name}”',
+      'home.remove.pass.text': 'Usunięcie akwarium całkiem wymaga hasła. Jeśli go nie masz — usuń akwarium ze swojej listy, u właściciela zostanie.',
+      'home.badcode.title': 'Ten kod nie pasuje',
+      'home.badcode.text': 'Kod akwarium ma dokładnie 10 znaków, litery i cyfry. Sprawdź, czy któryś nie zginął.',
+      'menu.tank': 'Akwarium',
+      'menu.copied': 'link skopiowany',
+      'menu.pass': '🔑 hasło',
+      'menu.pass.set': '🔓 ustaw hasło',
+      'menu.pass.title': 'Hasło akwarium',
+      'menu.rename.hint': 'Zmień nazwę akwarium',
+      'menu.close': 'Zamknij menu',
+      'menu.back': '← wstecz',
+      'menu.hint': 'kliknij w dowolnym miejscu — pokażę menu',
+      'menu.capture.title': 'Sfotografuj rybkę',
+      'menu.capture.sub': 'pokolorowana kartka ożywa w akwarium',
+      'menu.pack.title': 'Wypuść gotową rybkę',
+      'menu.pack.sub': 'z zestawu, bez kolorowania',
+      'menu.feed.title': 'Nakarm',
+      'menu.feed.sub': 'rybki zbiorą się przy pokarmie',
+      'menu.print.title': 'Kolorowanki do druku',
+      'menu.print.sub': '12 gatunków rybek na zwykłej kartce A4',
+      'menu.bg.title': 'Zmień tło',
+      'menu.bg.sub': 'obrazek, na tle którego pływają rybki',
+      'menu.fish.title': 'Usuń rybki',
+      'menu.fish.sub': 'wyjmij zbędne z akwarium',
+      'menu.fish.sub.pass': 'wyjmij zbędne — potrzebne hasło',
+      'menu.home.title': 'Moje akwaria',
+      'menu.home.sub': 'inne akwaria — i założenie nowego',
+      'menu.picker.title': 'Kogo wypuszczamy?',
+      'menu.picker.sub': 'Rybka z zestawu pojawi się w akwarium od razu',
+      'menu.picker.drawing': 'rysuję…',
+      'menu.picker.failed': 'nie wyszło',
+      'menu.picker.nopack': 'Zestaw nie jest zbudowany — uruchom tools\\convert-pack.ps1',
+      'menu.rename.title': 'Nazwa akwarium',
+      'menu.rename.text': 'Widzisz ją tylko ty — na liście akwariów i w tytule tej strony.',
+      'menu.rename.ok': 'Zapisz',
+      'menu.rename.fail': 'Nie udało się zmienić nazwy',
+      'menu.access.title': 'Dostęp do akwarium',
+      'menu.access.text': 'Kodem się ogląda, hasłem zarządza. Oba są zapisane w tej przeglądarce — po wyczyszczeniu jej danych nie ma skąd ich odzyskać.',
+      'menu.access.done': 'Gotowe',
+      'menu.access.change': 'Zmień hasło',
+      'menu.newpass.title': 'Nowe hasło akwarium',
+      'menu.newpass.first': 'Hasło do akwarium',
+      'menu.newpass.text': 'Co najmniej 4 znaki. Cyfry są wygodniejsze: łatwo je podyktować przez telefon i wpisać pilotem. Stare hasło przestanie działać na wszystkich urządzeniach.',
+      'menu.newpass.ph': 'nowe hasło',
+      'menu.newpass.short.title': 'Za krótkie',
+      'menu.newpass.short.text': 'Potrzebne są co najmniej cztery znaki.',
+      'menu.newpass.saved.title': 'Hasło zapisane',
+      'menu.newpass.saved.text': 'Zapisz je sobie: nie ma skąd go odzyskać. Kod akwarium się nie zmienił — nadal służy do oglądania.',
+      'menu.newpass.saved.field': 'Nowe hasło',
+      'menu.newpass.saved.ok': 'Zapisałem',
+      'menu.oldpass.title': 'Stare hasło',
+      'menu.oldpass.text': 'Hasło zmienia ten, kto zna obecne.',
+      'menu.fail.title': 'Nie wyszło',
+      'menu.fail.server': 'Serwer nie odpowiada.',
+      'menu.fail.pass': 'Serwer nie przyjął hasła.',
+      'menu.link.title': 'Link do akwarium',
+      'tank.doctitle': 'Akwarium',
+      'tank.frame.print': 'Kolorowanki do druku',
+      'tank.frame.bg': 'Tło akwarium',
+      'tank.frame.fish': 'Rybki w akwarium',
+      'tank.frame.capture': 'Zdjęcie rybki',
+      'tank.crash': '<b>Scena się nie uruchomiła</b><br>{msg}',
+      'menu.link.text': 'Sam nie zdołałem skopiować — weź stąd. Otworzy akwarium na dowolnym urządzeniu.',
+      'menu.link.ok': 'Gotowe',
+      'menu.share.title': 'Otwórz na innym ekranie',
+      'menu.share.sub': 'QR i link: telewizor, tablet, drugi telefon',
+      'menu.share.hint': 'Skieruj aparat telefonu — akwarium otworzy się tam',
+      'menu.share.copy': 'Skopiuj link',
+      'menu.share.copy.sub': 'wyślij go do komunikatora — i otwórz gdzie chcesz',
+      'menu.share.send': 'Wyślij link…',
+      'menu.share.send.sub': 'przez to, czym zwykle się dzielisz',
       'menu.share.pin': 'Kod dla telewizora',
       'menu.share.pin.sub': 'pięć cyfr — łatwo wpisać pilotem',
       'menu.share.pin.text': 'Wpisz te cyfry na telewizorze — na stronie głównej, w polu „Otwórz akwarium kodem”. Kod żyje 5 minut.',
@@ -167,50 +409,163 @@
       'adm.pass.show': 'Pokaż hasło',
       'adm.bg': 'Tło akwarium',
       'adm.bg.one': 'Tło {n}',
-      'adm.save': 'Zapisz',
-      'adm.saved': 'Zapisano',
-      'adm.delete': 'Usuń akwarium',
-      'adm.delete.confirm': 'Usunąć to akwarium? Tej operacji nie można cofnąć.',
-      'adm.logout': 'Wyloguj',
-      'print.title': 'Kolorowanki',
-      'print.sub': 'Drukuj w skali 100%. Nie dopasowuj do strony.',
-      'print.back': '← do akwarium',
-      'print.print': 'Drukuj',
-      'print.sheet': 'Pokoloruj tę rybkę',
-      'print.tip': 'Podczas robienia zdjęcia wszystkie cztery czarne kwadraty muszą być widoczne.',
-      'common.loading': 'Ładowanie…',
-      'common.error': 'Coś poszło nie tak.'
+      'adm.bg.own': 'Własne tło',
+      'adm.bg.add': 'własne tło',
+      'adm.bg.busy': 'wysyłam…',
+      'adm.bg.del': 'Usuń to tło',
+      'adm.bg.del.title': 'Usunąć tło?',
+      'adm.bg.del.text': 'Plik zostanie skasowany bezpowrotnie — w odróżnieniu od rybek kopia nie zostaje.',
+      'adm.bg.fail': 'Tło się nie wgrało',
+      'adm.bg.err.read': 'nie udało się odczytać pliku',
+      'adm.bg.err.img': 'to nie jest obrazek',
+      'adm.fish.count': 'rybek: {n}',
+      'adm.fish.pack': 'z zestawu · ',
+      'adm.fish.del': 'Usuń',
+      'adm.fish.del.title': 'Usunąć rybkę?',
+      'adm.fish.del.pack': 'Odpłynie z akwarium. Taką samą możesz wypuścić w każdej chwili.',
+      'adm.fish.del.painted': 'Rysunek trafi do kosza na serwerze — w razie czego można go przywrócić.',
+      'adm.empty': 'W akwarium nie ma jeszcze narysowanych rybek.',
+      'adm.empty.sub': 'Pokoloruj kartkę i zrób jej zdjęcie telefonem — link „Aparat” na górze.',
+      'adm.clear': 'Usuń wszystkie rybki',
+      'adm.clear.title': 'Opróżnić akwarium?',
+      'adm.clear.text': 'Odpłyną wszystkie rybki — {n} szt. Rysunki trafią do kosza na serwerze, można je przywrócić, ale z listy znikną.',
+      'adm.noserver': 'serwer niedostępny — uruchom node server.js',
+      'adm.gate.title': '🔒 Zarządzanie na hasło',
+      'adm.gate.text': 'Oglądać akwarium można bez hasła — jest ono potrzebne do zmiany tła, nazwy i usuwania rybek.',
+      'adm.gate.ph': 'hasło',
+      'adm.gate.enter': 'Wejdź',
+      'adm.gate.back': '← do akwarium',
+      'adm.gate.bad': 'Hasło nie pasuje.',
+      'adm.gate.old': 'Hasło jest nieaktualne — wpisz nowe.',
+      'adm.gate.many': 'Za dużo prób, poczekaj minutę.',
+      'adm.gate.wait': 'Za dużo prób. Poczekaj {n} s.',
+      'adm.gate.noserver': 'Serwer nie odpowiada.',
+      'adm.gate.need': 'Potrzebne jest hasło akwarium.',
+      'print.title': 'Kolorowanki — szablony do druku',
+      'print.home': '← moje akwaria',
+      'print.all': 'Drukuj wszystkie',
+      'print.one': 'Drukuj tę kartkę',
+      'print.note': 'Drukuj na zwykłym A4 poziomo, w skali 100% (bez „dopasuj do strony”) — rozmiar znaczników jest ważny dla rozpoznawania. Czarnych kwadratów w rogach nie kolorujemy!',
+      'print.note2': 'Nie ma drukarki pod ręką? W oknie drukowania wybierz „Zapisz jako PDF” — plik dojedzie tam, gdzie drukarka jest. A na razie wypuść z menu gotową rybkę.',
+      'print.nomanifest': 'Nie wczytał się manifest.json — sprawdź, czy serwer działa.',
+      'pass.ask.title': 'Hasło akwarium',
+      'pass.ask.text': 'Hasło jest potrzebne tylko do zarządzania. Oglądać można bez niego.',
+      'pass.ask.ph': 'na przykład 481902',
+      'pass.ask.ok': 'Wejdź',
+      'pass.bad.title': 'Hasło nie pasuje',
+      'pass.bad.text': 'Sprawdź hasło — to pokazane przy tworzeniu akwarium.',
+      'pass.many.title': 'Za dużo prób',
+      'pass.many.text': 'Poczekaj {n} s i spróbuj ponownie.',
+      'modal.cancel': 'Anuluj',
+      'modal.delete': 'Usuń',
+      'modal.ok': 'Jasne',
+      'modal.save': 'Zapisz',
+      'modal.copyHint': 'Kliknij, żeby skopiować',
+      'modal.copied': 'skopiowano'
     }
   };
 
-  var lang = localStorage.getItem(STORAGE_KEY);
-  if (!LANGS.includes(lang)) lang = 'en';
+  var PLURALS = {
+    pl: { fish: ['rybka', 'rybki', 'rybek'] },
+    en: { fish: ['fish', 'fish', 'fish'] }
+  };
+
+  function pluralIndex(lang, n) {
+    if (lang === 'en') return n === 1 ? 0 : 1;
+    var t = n % 10, h = n % 100;
+    if (t === 1 && h !== 11) return 0;
+    if (t >= 2 && t <= 4 && (h < 12 || h > 14)) return 1;
+    return 2;
+  }
+
+  function pick() {
+    var saved;
+    try { saved = localStorage.getItem(KEY); } catch (e) {}
+    if (saved && DICT[saved]) return saved;
+    var list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'en'];
+    for (var i = 0; i < list.length; i++) {
+      var code = String(list[i]).slice(0, 2).toLowerCase();
+      if (DICT[code]) return code;
+    }
+    return 'en';
+  }
+
+  var lang = pick();
 
   function t(key, vars) {
-    var text = (DICT[lang] && DICT[lang][key]) || DICT.en[key] || key;
-    if (vars) Object.keys(vars).forEach(function (k) { text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); });
-    return text;
+    var s = (DICT[lang] && DICT[lang][key]) || DICT.en[key] || key;
+    if (!vars) return s;
+    return s.replace(/\{(\w+)\}/g, function (m, name) {
+      return vars[name] === undefined ? m : vars[name];
+    });
+  }
+
+  function plural(n, what) {
+    var forms = (PLURALS[lang] || PLURALS.en)[what];
+    return n + ' ' + forms[pluralIndex(lang, n)];
   }
 
   function apply(root) {
     root = root || document;
     root.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+    root.querySelectorAll('[data-t-html]').forEach(function (el) { el.innerHTML = t(el.getAttribute('data-t-html')); });
+    root.querySelectorAll('[data-t-ph]').forEach(function (el) { el.placeholder = t(el.getAttribute('data-t-ph')); });
+    root.querySelectorAll('[data-t-title]').forEach(function (el) { el.title = t(el.getAttribute('data-t-title')); });
     root.querySelectorAll('[data-t-alt]').forEach(function (el) { el.alt = t(el.getAttribute('data-t-alt')); });
-    document.documentElement.lang = lang;
+    if (document.documentElement) document.documentElement.lang = lang;
   }
+
+  function set(next) {
+    if (!DICT[next] || next === lang) return;
+    lang = next;
+    try { localStorage.setItem(KEY, next); } catch (e) {}
+    apply(document);
+    window.dispatchEvent(new CustomEvent('aqua:lang', { detail: next }));
+  }
+
+  function mount(host) {
+    if (!host) return null;
+    host.classList.add('langpick');
+    host.textContent = '';
+    LANGS.forEach(function (code) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = code.toUpperCase();
+      b.title = DICT[code]['lang.name'];
+      b.dataset.lang = code;
+      b.setAttribute('aria-pressed', code === lang ? 'true' : 'false');
+      b.onclick = function () { set(code); };
+      host.appendChild(b);
+    });
+    var paint = function () {
+      host.querySelectorAll('button').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.dataset.lang === lang ? 'true' : 'false');
+      });
+    };
+    window.addEventListener('aqua:lang', paint);
+    return host;
+  }
+
+  window.addEventListener('storage', function (e) {
+    if (e.key !== KEY || !e.newValue || e.newValue === lang || !DICT[e.newValue]) return;
+    lang = e.newValue;
+    apply(document);
+    window.dispatchEvent(new CustomEvent('aqua:lang', { detail: lang }));
+  });
 
   window.I18N = {
     get lang() { return lang; },
-    get langs() { return LANGS.slice(); },
     t: t,
+    plural: plural,
     apply: apply,
-    set: function (next) {
-      if (!LANGS.includes(next)) return;
-      lang = next;
-      localStorage.setItem(STORAGE_KEY, lang);
-      apply();
-    }
+    set: set,
+    mount: mount,
+    langs: LANGS
   };
 
-  document.addEventListener('DOMContentLoaded', function () { apply(); });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { apply(document); });
+  } else {
+    apply(document);
+  }
 })();
