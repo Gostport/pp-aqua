@@ -1,124 +1,65 @@
-# Модели рыб
+# Fish models
 
-Все рыбы в игре — из купленного пака CGTrader, папка `pack/` (в git не лежит,
-собирается скриптом `tools/convert-pack.ps1`). Списка моделей в сцене больше
-нет: какие виды существуют, задаёт `assets/coloring/manifest.json` — он же
-описывает лист раскраски. Один список на весь проект, чтобы лист и аквариум
-не могли разойтись.
+The game uses a purchased fish model pack. The converted files live under `assets/models/pack/`, which is intentionally excluded from git because the model licence does not permit redistribution.
 
-Ориентацию модели (где нос, где спина) определяет `assets/fish-frame.js` —
-по взмахам хвоста в анимации. Габаритный эвристик в `assets/fish-glb.js`
-остался запасным путём для моделей без анимации.
+The species list is defined by `assets/coloring/manifest.json`. The same manifest connects printable colouring sheets to the corresponding 3D models.
 
-## Где искать
+Model orientation is determined by `assets/fish-frame.js` from the animation. `assets/fish-glb.js` provides a fallback for models without animation.
 
-| Источник | Логин | Лицензия | Как скачать |
+## Where to find models
+
+| Source | Account | Licence | Download |
 |---|---|---|---|
-| [poly.pizza](https://poly.pizza/search/fish) | не нужен | CC0 / CC-BY | кнопка Download → GLB |
-| [Sketchfab](https://sketchfab.com/search?features=downloadable&type=models&q=fish) | нужен (бесплатный) | ставь фильтр **CC0** или **CC-BY** | Download → **glTF Binary (.glb)** |
-| [Khronos glTF-Sample-Assets](https://github.com/KhronosGroup/glTF-Sample-Assets/blob/main/Models/Models.md) | не нужен | CC0 | прямая ссылка Download GLB |
+| [Poly Pizza](https://poly.pizza/search/fish) | Not required | Check each asset | Download GLB |
+| [Sketchfab](https://sketchfab.com/search?features=downloadable&type=models&q=fish) | Free account may be required | Prefer CC0 or CC-BY | Download glTF Binary (.glb) |
+| [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets/blob/main/Models/Models.md) | Not required | CC0 for the applicable samples | Download GLB |
 
-Поисковые слова, которые дают именно рыб, а не абстракции:
-`clownfish`, `angelfish`, `koi carp`, `betta fish`, `yellow tang`, `guppy`,
-`goldfish`, `reef fish`, `tropical fish rigged`.
+Useful search terms include `clownfish`, `angelfish`, `koi carp`, `betta fish`, `yellow tang`, `guppy`, `goldfish`, `reef fish`, and `tropical fish rigged`.
 
-На Sketchfab включи фильтры **Downloadable** и **Animated** — анимированные рыбы
-уже умеют плавать, и сцена подхватит их скелет сама.
+For Sketchfab, prefer **Downloadable** and **Animated** models so the aquarium can use the supplied swimming animation.
 
-## Требования к файлу
+## File requirements
 
-- Формат **`.glb`** (один файл, текстуры внутри). `.gltf` + папка с текстурами тоже
-  сработает, но класть надо всё вместе.
-- Размер желательно до ~15 МБ. Барамунди весит 12 МБ — это уже многовато.
-- Одна рыба на файл, без сцены вокруг.
-- Сжатие геометрии **Draco поддерживается**. А вот текстуры **KTX2/Basis — нет**,
-  такой файл не откроется. На Sketchfab это варианты «glTF» и «glTF Binary», не «KTX2».
-- Ориентация **любая**: сцена сама определяет, где голова, по боковой толщине тела.
-- Анимация: если в файле есть скелет с клипом — играем первый клип. Если скелета нет —
-  гнём тело в вершинном шейдере.
-- Текстуры: если есть — используем их. Если нет — красим процедурно (контршейдинг,
-  чешуя, перламутр).
+- `.glb` is preferred because it keeps geometry and textures together. `.gltf` with its texture files also works when all files are kept together.
+- Keep individual models reasonably small. Around 15 MB or less is a good target for browser loading.
+- One fish per model, without an unrelated scene around it.
+- Draco geometry compression is supported.
+- KTX2/Basis textures are not supported by the current runtime.
+- Model orientation does not need to be standardized. The scene estimates the long axis, head, and back.
+- If a skeletal animation exists, the first animation clip is used. Without a skeleton, the runtime can fall back to procedural body movement.
+- If textures exist, they are used. Models without textures can use the runtime's procedural material handling.
 
-## Как добавить вид в игру
+## Adding a species
 
-Вид попадает в игру вместе с листом раскраски — отдельно подключить модель
-некуда. Порядок:
+A species enters the game together with its colouring sheet.
 
-1. Открыть `/tools/silhouettes.html`, дождаться конца прогона, «Скачать
-   contours.json», положить файл в `tools/`.
-2. В `tools/make-coloring.js` добавить строку в `SPECIES`: имя папки модели,
-   русское название и `len` — длину рыбы в единицах сцены (аквариум внутри
-   24 × 13 × 12, так что 1.5 — мелочь, 2.6 — крупная).
-3. `node tools/make-coloring.js` — перегенерирует SVG-листы и манифест.
-4. Проверить `/tools/test-capture.html`: он прогоняет каждый лист через
-   распознавание с перекосом и переворотом. Должно быть «провалов нет».
+1. Open `/tools/silhouettes.html` and generate `contours.json`.
+2. Add the species to `tools/make-coloring.js` with its model folder, English and Polish names, and scene length.
+3. Run `node tools/make-coloring.js` to rebuild the SVG sheets and manifest.
+4. Run `/tools/test-capture.html` and verify every sheet passes recognition tests under skew, rotation, and noise.
 
-Коды угловых меток подбираются заново при каждом запуске, но детерминированно:
-пока список видов не менялся, метки те же и напечатанные листы остаются
-рабочими. **Добавление вида сдвигает коды — старые распечатки придётся
-перепечатать.**
+Marker codes are deterministic for a fixed species list. Adding a species can change the code assignment, so previously printed sheets may need to be regenerated.
 
-Имена материалов модели посмотреть так:
+## Inspecting a GLB
+
+For a standard glTF binary, a quick inspection can be done with a glTF-aware tool. The exact container layout can vary between exporters, so use a dedicated glTF inspector when a model behaves unexpectedly.
+
+## Converting OBJ to GLB
+
+OBJ packages commonly contain an `.obj`, `.mtl`, and one or more image files. A convenient conversion route is:
 
 ```bash
-node -e '
-const b=require("fs").readFileSync("koi.glb");
-const g=JSON.parse(b.slice(20,20+b.readUInt32LE(12)).toString());
-console.log("материалы:", g.materials.map(m=>m.name).join(", "));
-console.log("анимации :", (g.animations||[]).map(a=>a.name).join(", ")||"нет");
-console.log("текстуры :", (g.images||[]).length);
-'
+npx -y obj2gltf@3 -i fish.obj -o fish.glb
 ```
 
-## Если скачал OBJ, а не GLB
+Two common problems are absolute texture paths in the MTL file and unexpected coordinate systems. Keep textures beside the OBJ and use relative paths. The aquarium scene determines model orientation at runtime.
 
-Free3D, CGTrader и прочие часто отдают OBJ + MTL + JPG. Конвертируется одной командой:
+## Current purchased pack
 
-```bash
-npx -y obj2gltf@3 -i fish.obj -o ../../assets/models/fish.glb
-```
+The intended pack is **Coral Reef Fish Collection animated — Game Ready pack 8** by JosKata on CGTrader. It contains 30 reef fish with skeletal animation and is licensed separately from this repository.
 
-Две грабли, на которые я уже наступил:
+Only models that are present in the converted pack and represented by the colouring manifest appear in the ready-made fish picker.
 
-1. **Абсолютный путь к текстуре в MTL.** Строка вида
-   `map_Kd C:\Users\Somebody\Desktop\texture.png` — это путь с компьютера автора.
-   Модель приедет серой. Скопируй текстуру рядом с `.obj` и почини строку:
-   `sed -i 's|^map_Kd .*|map_Kd fish.png|' fish.mtl`
-2. **Z-up из 3ds Max.** Такие рыбы лежат вдоль Y и стоят на хвосте. Ничего делать
-   не надо — сцена определяет длинную ось, спину и голову сама.
+## Licensing
 
-## Лицензии
-
-### ✅ В игре стоит купленный пак
-
-[«Coral Reef Fish Collection animated — Game Ready pack 8»](https://www.cgtrader.com/3d-model-collections/coral-reef-fish-collection-animated-game-ready-pack-8)
-(автор JosKata, CGTrader), 30 рифовых рыб, лицензия **Royalty Free** — коммерческое
-использование и модификация разрешены, запрещены перепродажа файлов и обучение
-на них нейросетей. Архивы в папке `купил 3д рыбок/`, счёт-invoice там же.
-FBX → glTF собирает `tools/convert-pack.ps1`.
-
-В игре 12 видов из 28 — те, у кого есть лист раскраски. Остальные доступны
-только через админку, со своими заводскими текстурами.
-
-### ⛔ Убраны из репозитория перед публикацией
-
-| Модель | Источник | Лицензия |
-|---|---|---|
-| `reef-chromis, coral-angelfish, tropical-fish` | Free3D | ❌ **Personal Use License** — коммерческое использование запрещено |
-| `climbing-perch` | из архива `48-fish3d.rar` | ❌ **источник неизвестен, лицензия не проверена** |
-
-На этих четырёх держались прежние раскраски. Из сцены они убраны, ссылок
-в коде не осталось, сами файлы переехали в `_archive/models-unused/` —
-папка целиком не входит в репозиторий. Детские рисунки, снятые с них,
-пересажены на похожие по пропорциям покупные виды: см. `LEGACY_KIND`
-в `demos/realistic-tank.html`.
-
-### Отложено в `_archive/models-unused/` (тоже вне репозитория)
-
-| Модель | Источник | Лицензия |
-|---|---|---|
-| `BarramundiFish.glb` | Khronos glTF-Sample-Assets | ✅ CC0 |
-| `clownfish, fish1, fish2, shark, whale, dolphin, mantaray` | Quaternius, Animated Fish Pack | ✅ CC0 |
-
-Эти лицензионно чистые и годятся как запасной вариант, если с купленным
-паком что-то не сложится.
+The application source is MIT licensed. Fish model files are not part of that licence. Every external model must be used according to its own licence, and purchased or restricted model files must not be committed to this repository.
