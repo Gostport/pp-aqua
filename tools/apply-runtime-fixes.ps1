@@ -5,35 +5,43 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$backup = Join-Path $root "backup\runtime-fix-$stamp"
+$backup = Join-Path $root ("backup\runtime-fix-{0}" -f $stamp)
 New-Item -ItemType Directory -Force $backup | Out-Null
 
-$files = @(
-  (Join-Path $root 'server.js'),
-  (Join-Path $root 'demos\realistic-tank.html')
-)
-foreach ($file in $files) {
-  if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing file: $file" }
+$serverPath = Join-Path $root 'server.js'
+$tankPath = Join-Path $root 'demos\realistic-tank.html'
+
+foreach ($file in @($serverPath, $tankPath)) {
+  if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
+    throw "Missing file: $file"
+  }
   Copy-Item -LiteralPath $file -Destination (Join-Path $backup (Split-Path $file -Leaf)) -Force
 }
 
-# server.js: remove Russian runtime output and single-line Russian comments.
-$serverPath = Join-Path $root 'server.js'
-$server = Get-Content -LiteralPath $serverPath -Raw -Encoding UTF8
-$server = $server.Replace('console.log(`Аквариумы: http://localhost:${PORT}/`);', 'console.log(`Aquariums: http://localhost:${PORT}/`);')
-$server = $server.Replace('console.log(`С телефона (Wi-Fi ${name}): http://${net.address}:${PORT}/`);', 'console.log(`Phone (Wi-Fi ${name}): http://${net.address}:${PORT}/`);')
-$server = $server.Replace("name: 'Аквариум'", "name: 'Aquarium'")
-$server = [regex]::Replace($server, '(?m)^\s*//[^\r\n]*[\u0400-\u04FF][^\r\n]*(?:\r?\n|$)', '')
-[IO.File]::WriteAllText($serverPath, $server, (New-Object Text.UTF8Encoding $false))
+# Read/write as UTF-8. This script itself is ASCII-only so Windows PowerShell 5.1
+# cannot misread its source text because of a missing UTF-8 BOM.
+$server = [IO.File]::ReadAllText($serverPath, [Text.UTF8Encoding]::new($false))
+$tank = [IO.File]::ReadAllText($tankPath, [Text.UTF8Encoding]::new($false))
 
-# realistic-tank.html: make missing model-pack entries visible instead of silently dropping fish.
-$tankPath = Join-Path $root 'demos\realistic-tank.html'
-$tank = Get-Content -LiteralPath $tankPath -Raw -Encoding UTF8
-$tank = $tank.Replace('<html lang="ru">', '<html lang="en">')
-$tank = $tank.Replace('<title data-t="tank.doctitle">Аквариум</title>', '<title data-t="tank.doctitle">Aquarium</title>')
+# Keep the runtime messages in English. Use regex so the replacement also works
+# if the source text has been mojibaked by an older checkout.
+$server = [regex]::Replace(
+  $server,
+  'console\.log\(`[^`\r\n]*http://localhost:\$\{PORT\}/`\);',
+  'console.log(`Aquariums: http://localhost:${PORT}/`);',
+  [Text.RegularExpressions.RegexOptions]::IgnoreCase
+)
+$server = [regex]::Replace(
+  $server,
+  'console\.log\(`[^`\r\n]*Wi-Fi[^`\r\n]*http://\$\{\$?\{?net\.address\}?\}:\$\{PORT\}/`\);',
+  'console.log(`Phone (Wi-Fi ${name}): http://${net.address}:${PORT}/`);',
+  [Text.RegularExpressions.RegexOptions]::IgnoreCase
+)
 
-$anchor = "  function withPackModel(name, cb) {"
-$helper = @'
+# Make the missing-model path explicit instead of silently returning.
+$anchor = '  function withPackModel(name, cb) {'
+if ($tank.IndexOf('function showModelError(name)') -lt 0) {
+  $helper = @'
   function showModelError(name) {
     var id = 'model-pack-error';
     var el = document.getElementById(id);
@@ -48,28 +56,29 @@ $helper = @'
   }
 
 '@
-if ($tank -notmatch [regex]::Escape('function showModelError(name)')) {
+  if ($tank.IndexOf($anchor) -lt 0) {
+    throw 'Could not find withPackModel() anchor in realistic-tank.html'
+  }
   $tank = $tank.Replace($anchor, $helper + $anchor)
 }
-$tank = $tank.Replace('      if (!item) return;', '      if (!item) { showModelError(name); return; }')
-$tank = $tank.Replace("        console.error('пак: не загрузилась ' + name, err);", "        console.error('[AQUA] Failed to load 3D model:', name, err); showModelError(name);")
-$tank = $tank.Replace("        console.error('пак не собран — запусти tools/convert-pack.ps1');", "        console.error('[AQUA] Model pack is not installed or could not be loaded. Install the replacement fish pack.');")
-$tank = $tank.Replace("          console.warn('нет шаблона для вида ' + item.kind + ' — рыбка пропущена');", "          console.warn('[AQUA] No coloring template for fish kind:', item.kind);")
-$tank = [regex]::Replace($tank, '(?m)^\s*//[^\r\n]*[\u0400-\u04FF][^\r\n]*(?:\r?\n|$)', '')
-[IO.File]::WriteAllText($tankPath, $tank, (New-Object Text.UTF8Encoding $false))
 
-# Validate that the two runtime files contain no Cyrillic and still parse as JavaScript where applicable.
-$remaining = @()
-foreach ($file in $files) {
-  $text = Get-Content -LiteralPath $file -Raw -Encoding UTF8
-  if ($text -match '[\u0400-\u04FF]') { $remaining += $file }
-}
-if ($remaining.Count) {
-  Write-Warning 'Cyrillic remains in:'
-  $remaining | ForEach-Object { Write-Warning $_ }
-} else {
-  Write-Host 'No Cyrillic remains in server.js or demos/realistic-tank.html.' -ForegroundColor Green
-}
+$tank = $tank.Replace(
+  '      if (!item) return;',
+  '      if (!item) { showModelError(name); return; }'
+)
+$tank = $tank.Replace(
+  "        console.error('pak: model load failed ' + name, err);",
+  "        console.error('[AQUA] Failed to load 3D model:', name, err); showModelError(name);"
+)
+$tank = $tank.Replace(
+  "        console.error('pak not built - run tools/convert-pack.ps1');",
+  "        console.error('[AQUA] Model pack is not installed or could not be loaded. Install the replacement fish pack.');"
+)
+
+# Write UTF-8 without BOM. JavaScript and Node both accept it, and this avoids
+# PowerShell 5.1 adding an unexpected BOM to the runtime files.
+[IO.File]::WriteAllText($serverPath, $server, [Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText($tankPath, $tank, [Text.UTF8Encoding]::new($false))
 
 Write-Host "Backup created: $backup" -ForegroundColor DarkCyan
 Write-Host 'Runtime fixes applied.' -ForegroundColor Green
