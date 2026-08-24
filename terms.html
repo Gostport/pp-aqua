@@ -1,404 +1,72 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Правила и данные — Аквариум с раскрасками</title>
+<title>Terms and data — PP Aqua</title>
 <style>
-  :root {
-    --ink: #eaf6ff;
-    --muted: #8aa6bd;
-    --dim: #5f7c94;
-    --card: rgba(9, 24, 40, 0.72);
-    --line: rgba(140, 200, 255, 0.16);
-    --accent: #58d6ff;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; }
-  body {
-    min-height: 100vh;
-    background:
-      radial-gradient(1200px 800px at 20% -10%, #0d4a6b 0%, transparent 60%),
-      linear-gradient(180deg, #051624 0%, #030d17 100%);
-    background-attachment: fixed;
-    color: var(--ink);
-    font: 15.5px/1.7 "Segoe UI", system-ui, -apple-system, sans-serif;
-  }
-  .wrap { max-width: 720px; margin: 0 auto; padding: 56px 24px 80px; }
-  a { color: var(--accent); }
-  h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.15; margin: 0 0 8px; font-weight: 650; }
-  h2 { font-size: 19px; margin: 34px 0 10px; font-weight: 620; }
-  p { margin: 0 0 12px; }
-  .lead { color: var(--muted); font-size: 16.5px; margin-bottom: 28px; }
-  .back { display: inline-block; color: var(--muted); text-decoration: none; font-size: 14px; }
-  .back:hover { color: var(--accent); }
-  ul { margin: 0 0 12px; padding-left: 22px; }
-  li { margin-bottom: 6px; }
-  .card {
-    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-    padding: 18px 22px; margin: 20px 0;
-  }
-  .card p:last-child { margin-bottom: 0; }
-  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13.5px; }
-  code {
-    background: rgba(140,200,255,.08); border: 1px solid var(--line);
-    border-radius: 5px; padding: 1px 6px; color: var(--muted);
-    font-family: ui-monospace, Consolas, monospace; font-size: 13px;
-  }
-
-  /* Шапка: слева выход к аквариумам, справа переключатель языка. */
-  .head { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
-  .head .sp { flex: 1; }
-  .langpick { display: inline-flex; gap: 4px; }
-  .langpick button {
-    cursor: pointer; font: inherit; font-size: 12px; letter-spacing: .04em;
-    color: var(--muted); background: rgba(140, 200, 255, .07);
-    border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px;
-  }
-  .langpick button:hover { color: var(--ink); background: rgba(140, 200, 255, .15); }
-  .langpick button[aria-pressed="true"] { color: #04101c; background: var(--accent); border-color: var(--accent); font-weight: 600; }
-
-  /* Текст правил — не в общем словаре: он длинный, нужен на одной странице
-     и читается целиком, а не по фразе. Три версии лежат рядом, видна одна. */
-  .doc[hidden] { display: none; }
+  :root { --ink:#eaf6ff; --muted:#8aa6bd; --dim:#5f7c94; --card:rgba(9,24,40,.72); --line:rgba(140,200,255,.16); --accent:#58d6ff; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { min-height:100vh; background:radial-gradient(1200px 800px at 20% -10%,#0d4a6b 0%,transparent 60%),linear-gradient(180deg,#051624 0%,#030d17 100%); background-attachment:fixed; color:var(--ink); font:15.5px/1.7 "Segoe UI",system-ui,-apple-system,sans-serif; }
+  .wrap { max-width:720px; margin:0 auto; padding:56px 24px 80px; }
+  a { color:var(--accent); }
+  h1 { font-size:clamp(26px,4vw,36px); line-height:1.15; margin:0 0 8px; font-weight:650; }
+  h2 { font-size:19px; margin:34px 0 10px; font-weight:620; }
+  p { margin:0 0 12px; }
+  .lead { color:var(--muted); font-size:16.5px; margin-bottom:28px; }
+  .back { display:inline-block; color:var(--muted); text-decoration:none; font-size:14px; }
+  .back:hover { color:var(--accent); }
+  ul { margin:0 0 12px; padding-left:22px; }
+  li { margin-bottom:6px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 22px; margin:20px 0; }
+  footer { margin-top:40px; padding-top:20px; border-top:1px solid var(--line); color:var(--dim); font-size:13.5px; }
+  code { background:rgba(140,200,255,.08); border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--muted); font-family:ui-monospace,Consolas,monospace; font-size:13px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-
-  <div class="head">
-    <a class="back" href="/" data-t="terms.back">← к аквариумам</a>
-    <span class="sp"></span>
-    <span id="lang"></span>
-  </div>
-
-  <div class="doc" data-doc="ru">
-  <h1>Правила и данные</h1>
-  <p class="lead">Коротко и без юридического тумана: что это за сервис, что он хранит
-  и чего от него не стоит ждать.</p>
-
-  <h2>Что это</h2>
-  <p>Любительский домашний проект: ребёнок раскрашивает бумажный лист, фотографирует
-  его телефоном, и рыбка с его рисунком плавает в аквариуме на экране. Сервис
-  бесплатный, никакой рекламы и оплаты в нём нет и не планируется.</p>
-  <p>Держит его частное лицо — не компания. Связаться можно в телеграме:
-  <a href="https://t.me/mrmot9i">@mrmot9i</a>. Исходный код открыт:
-  <a href="https://github.com/MrMoT9I/paper-aquarium">github.com/MrMoT9I/paper-aquarium</a>.</p>
-  <p>Есть и <a href="https://t.me/+X9HNq8W2Sdc2YmFk">общий чат проекта</a> в телеграме:
-  вопросы, идеи и новости про аквариум.</p>
-
-  <h2>Работает «как есть»</h2>
-  <p>Это игрушка, а не услуга. Она может быть недоступна, потерять данные,
-  измениться до неузнаваемости или закрыться совсем — без предупреждения
-  и без обязательств с моей стороны. Если рисунок дорог, сохраните его файлом
-  у себя: страница управления показывает каждую рыбку, картинку можно скачать
-  средствами браузера.</p>
-
-  <h2>Аккаунтов нет, есть код и пароль</h2>
-  <ul>
-    <li><b>Код аквариума</b> — он же адрес страницы. У кого есть ссылка, тот может
-      смотреть аквариум, кормить рыбок и добавлять новых. Это сделано нарочно:
-      ребёнок снимает лист телефоном по ссылке, и пароль там был бы преградой.</li>
-    <li><b>Пароль</b> нужен на необратимое: удалить рыбок или аквариум,
-      переименовать его, сменить сам пароль.</li>
-    <li>Восстановить их негде — почты и аккаунта у сервиса нет. Потеряли пароль —
-      аквариум останется доступен для просмотра, но управлять им уже не выйдет.</li>
-  </ul>
-  <p>Значит, ссылку на аквариум стоит давать только тем, кому доверяете.</p>
-
-  <h2>Что хранится</h2>
-  <ul>
-    <li>картинки раскрашенных рыбок — то, что сняли камерой и выпустили в аквариум;</li>
-    <li>название аквариума, которое вы придумали;</li>
-    <li>снимок сцены — он показывается карточкой в списке аквариумов;</li>
-    <li>загруженные вами фоны;</li>
-    <li>от пароля — только его scrypt-хеш с солью, самого пароля на сервере нет.</li>
-  </ul>
-  <p>В браузере, на вашем устройстве, дополнительно лежат список ваших аквариумов
-  и их пароли — чтобы не вводить код каждый раз. Это обычное хранилище страницы
-  (<code>localStorage</code>), не cookie, и оно нужно для работы самого сервиса,
-  поэтому баннера про cookie тут нет. Данные с устройства не уходят никуда,
-  кроме этого сервера, и чистятся вместе с данными сайта в браузере.</p>
-
-  <div class="card">
-    <p><b>Сам аквариум журнала обращений не ведёт</b>: в его лог попадает только
-    «в такой-то аквариум добавлена рыбка», без адресов. Ещё адрес посетителя
-    держится в оперативной памяти около часа, чтобы никто не наплодил сотню
-    аквариумов за минуту — на диск он не попадает и при перезапуске исчезает.</p>
-    <p>Но перед аквариумом стоит обычный веб-прокси, и он, как принято, пишет
-    технический журнал обращений: время, IP-адрес, адрес страницы, код ответа.
-    Журнал крутится по кругу и затирается сам, нужен только чтобы разобраться,
-    если что-то отвалилось, в аналитику не идёт и никому не передаётся.</p>
-  </div>
-
-  <p>Ни счётчиков, ни аналитики, ни рекламных скриптов на страницах нет. Данные
-  никому не передаются и не продаются.</p>
-
-  <h2>Удаление</h2>
-  <p>Рыбку и аквариум удаляют на странице управления, паролем. Удалённое сначала
-  переезжает в корзину на сервере — на случай «нажал не туда», — а <b>через
-  30 дней стирается безвозвратно</b>, автоматически.</p>
-  <p>Если пароль потерян, а данные нужно убрать — напишите
-  <a href="https://t.me/mrmot9i">@mrmot9i</a> и укажите код аквариума, удалю руками.</p>
-
-  <h2>Что загружаете — за то и отвечаете</h2>
-  <p>Сервис задуман для детских рисунков рыб. Всё, что вы туда отправляете, —
-  ваша ответственность: чужого, запрещённого законом и просто неуместного там
-  быть не должно. Я вправе удалить любое содержимое и закрыть доступ к любому
-  аквариуму без объяснений — в первую очередь если увижу, что сервис используют
-  не по назначению.</p>
-
-  <h2>Персональные данные (RODO / GDPR)</h2>
-  <p>Сервис держит частное лицо, проживающее в Польше, — оно же администратор
-  данных в смысле GDPR (по-польски RODO). Обрабатывается ровно то, что перечислено
-  выше, и только ради работы самого аквариума; правовое основание —
-  ст. 6(1)(f) GDPR, законный интерес: показать вам ваши же рисунки.</p>
-  <p>У вас есть право получить копию своих данных, исправить их, удалить,
-  ограничить обработку и возразить против неё. Всё это делается через
-  <a href="https://t.me/mrmot9i">@mrmot9i</a>: назовите код аквариума, и я отвечу.
-  Если ответ вас не устроит, можно пожаловаться в надзорный орган — в Польше это
-  Prezes Urzędu Ochrony Danych Osobowych (uodo.gov.pl).</p>
-  <p>Сервис не предназначен для самостоятельного использования детьми младше 16 лет:
-  аквариум заводит взрослый и сам решает, кому давать ссылку. Ребёнок пользуется
-  им под присмотром родителя и с его согласия.</p>
-
-  <h2>Модели рыб</h2>
-  <p>3D-модели рыб — покупной набор стороннего автора, они не являются частью
-  открытого кода и распространяются по своей лицензии. Открытый код проекта —
-  под лицензией MIT.</p>
-
-  <footer>
-    Правила могут меняться вместе с проектом; последняя редакция — та, что
-    вы читаете. Вопросы и просьбы — <a href="https://t.me/mrmot9i">@mrmot9i</a>.
-  </footer>
-  </div>
-
-  <div class="doc" data-doc="en" hidden>
+  <a class="back" href="/">← to the aquariums</a>
   <h1>Terms and data</h1>
-  <p class="lead">Short and without legal fog: what this service is, what it keeps
-  and what you should not expect from it.</p>
+  <p class="lead">A plain-language summary of what PP Aqua stores and how the service behaves.</p>
 
   <h2>What this is</h2>
-  <p>A hobby project made at home: a child colours a paper sheet, takes a photo of it
-  with a phone, and a fish carrying that drawing swims in an aquarium on the screen.
-  The service is free; there is no advertising and no payment, and none is planned.</p>
-  <p>It is run by a private individual, not a company. You can get in touch on Telegram:
-  <a href="https://t.me/mrmot9i">@mrmot9i</a>. The source code is open:
-  <a href="https://github.com/MrMoT9I/paper-aquarium">github.com/MrMoT9I/paper-aquarium</a>.</p>
-  <p>There is also a <a href="https://t.me/+X9HNq8W2Sdc2YmFk">group chat on Telegram</a>:
-  questions, ideas and news about the aquarium.</p>
+  <p>PP Aqua is a hobby project for turning children's coloured fish drawings into animated 3D fish. It is provided as-is and may change or become unavailable.</p>
 
-  <h2>Provided “as is”</h2>
-  <p>This is a toy, not a service you are buying. It may be unavailable, lose data,
-  change beyond recognition or shut down entirely — without notice and without any
-  obligation on my side. If a drawing matters to you, save it as a file: the management
-  page shows every fish, and the picture can be downloaded with the browser.</p>
-
-  <h2>No accounts — a code and a password</h2>
+  <h2>Accounts, codes, and passwords</h2>
   <ul>
-    <li><b>The aquarium code</b> is also the page address. Anyone with the link can
-      watch the aquarium, feed the fish and add new ones. That is deliberate: the child
-      photographs a sheet by following the link, and a password there would only get
-      in the way.</li>
-    <li><b>The password</b> is required for anything irreversible: deleting fish or the
-      aquarium, renaming it, changing the password itself.</li>
-    <li>There is nowhere to recover them from — the service has no e-mail and no
-      accounts. If the password is lost, the aquarium stays viewable, but it can no
-      longer be managed.</li>
+    <li>There are no user accounts.</li>
+    <li>The aquarium code acts as the viewing link and allows adding fish and changing non-destructive settings.</li>
+    <li>The aquarium password protects destructive actions such as deleting fish, deleting the aquarium, renaming it, and changing the password.</li>
+    <li>If the code or password is lost, there is no account-based recovery mechanism.</li>
   </ul>
-  <p>So share the link to an aquarium only with people you trust.</p>
 
   <h2>What is stored</h2>
   <ul>
-    <li>pictures of the coloured fish — whatever was photographed and released into the aquarium;</li>
-    <li>the aquarium name you chose;</li>
-    <li>a snapshot of the scene — it is shown as the card in the list of aquariums;</li>
-    <li>the backgrounds you uploaded;</li>
-    <li>of the password, only its salted scrypt hash; the password itself is not on the server.</li>
+    <li>Uploaded fish drawings.</li>
+    <li>The aquarium name.</li>
+    <li>A scene preview image.</li>
+    <li>Custom aquarium backgrounds.</li>
+    <li>A salted scrypt password hash, never the plaintext password.</li>
   </ul>
-  <p>Your browser additionally keeps, on your own device, the list of your aquariums and
-  their passwords, so that you do not have to type the code every time. This is ordinary
-  page storage (<code>localStorage</code>), not cookies, and it is needed for the service
-  to work at all — which is why there is no cookie banner here. Nothing from your device
-  goes anywhere except this server, and it is wiped together with the site data in your
-  browser.</p>
 
   <div class="card">
-    <p><b>The aquarium itself keeps no access log</b>: its own log only says “a fish was
-    added to such and such aquarium”, with no addresses. A visitor's address is also held
-    in memory for about an hour so that nobody can create a hundred aquariums in a minute —
-    it never reaches the disk and disappears on restart.</p>
-    <p>In front of the aquarium, however, sits an ordinary web proxy, and it does what such
-    proxies do: it writes a technical access log — time, IP address, page address, response
-    code. That log rotates and overwrites itself, it exists only to work out what broke when
-    something breaks, it does not feed any analytics and is not passed on to anyone.</p>
+    <p><b>Application logging:</b> the aquarium server does not intentionally store visitor IP addresses in aquarium data. A reverse proxy in front of it may create ordinary technical access logs, depending on its configuration.</p>
   </div>
-
-  <p>There are no counters, no analytics and no advertising scripts on these pages. The data
-  is not shared with anyone and is not sold.</p>
 
   <h2>Deletion</h2>
-  <p>Fish and aquariums are deleted on the management page, with the password. Deleted items
-  first move to a trash folder on the server — in case of a misclick — and are then
-  <b>erased permanently after 30 days</b>, automatically.</p>
-  <p>If the password is lost and the data has to go, write to
-  <a href="https://t.me/mrmot9i">@mrmot9i</a> with the aquarium code and I will delete it by hand.</p>
+  <p>Deleted fish and aquariums are moved to server-side trash first so accidental deletion can be recovered. Trash is permanently purged after the configured retention period, 30 days by default.</p>
 
-  <h2>You are responsible for what you upload</h2>
-  <p>The service is meant for children's drawings of fish. Everything you send to it is your
-  responsibility: other people's material, anything unlawful or simply out of place does not
-  belong there. I may remove any content and close access to any aquarium without explanation
-  — first of all if I see the service being used for something it was not made for.</p>
+  <h2>User responsibility</h2>
+  <p>The service is intended for children's fish drawings. Do not upload unlawful, abusive, or unrelated material. The operator may remove content or disable access when necessary to protect the service or its users.</p>
 
-  <h2>Personal data (GDPR / RODO)</h2>
-  <p>The service is run by a private individual residing in Poland, who is also the data
-  controller within the meaning of the GDPR (RODO in Polish). Exactly what is listed above is
-  processed, and only so that the aquarium itself works; the legal basis is
-  Art. 6(1)(f) GDPR, legitimate interest: showing you your own drawings.</p>
-  <p>You have the right to obtain a copy of your data, to rectify it, to erase it, to restrict
-  processing and to object to it. All of that goes through
-  <a href="https://t.me/mrmot9i">@mrmot9i</a>: give the aquarium code and I will reply. If the
-  reply does not satisfy you, you may lodge a complaint with the supervisory authority — in
-  Poland that is the Prezes Urzędu Ochrony Danych Osobowych (uodo.gov.pl).</p>
-  <p>The service is not intended to be used on their own by children under 16: an adult creates
-  the aquarium and decides who gets the link. A child uses it under a parent's supervision and
-  with their consent.</p>
+  <h2>Personal data</h2>
+  <p>The service is designed to minimize personal data. It does not require an account, email address, or profile. A public deployment should provide a jurisdiction-appropriate privacy notice and a real contact address before accepting public users.</p>
 
-  <h2>The fish models</h2>
-  <p>The 3D fish models are a purchased set by a third-party author; they are not part of the
-  open source code and are distributed under their own licence. The project's open source code
-  is under the MIT licence.</p>
+  <h2>Fish models</h2>
+  <p>The 3D fish models are separately licensed assets and are not part of the MIT-licensed application source.</p>
 
-  <footer>
-    These terms may change along with the project; the latest version is the one you are
-    reading. Questions and requests — <a href="https://t.me/mrmot9i">@mrmot9i</a>.
-  </footer>
-  </div>
-
-  <div class="doc" data-doc="pl" hidden>
-  <h1>Zasady i dane</h1>
-  <p class="lead">Krótko i bez prawniczej mgły: czym jest ten serwis, co przechowuje
-  i czego nie należy po nim oczekiwać.</p>
-
-  <h2>Co to jest</h2>
-  <p>Amatorski, domowy projekt: dziecko koloruje kartkę papieru, robi jej zdjęcie telefonem,
-  a rybka z jego rysunkiem pływa w akwarium na ekranie. Serwis jest bezpłatny, nie ma w nim
-  reklam ani płatności i nie jest to planowane.</p>
-  <p>Prowadzi go osoba prywatna, nie firma. Kontakt przez Telegram:
-  <a href="https://t.me/mrmot9i">@mrmot9i</a>. Kod źródłowy jest otwarty:
-  <a href="https://github.com/MrMoT9I/paper-aquarium">github.com/MrMoT9I/paper-aquarium</a>.</p>
-  <p>Jest też <a href="https://t.me/+X9HNq8W2Sdc2YmFk">wspólny czat projektu</a> na Telegramie:
-  pytania, pomysły i nowości o akwarium.</p>
-
-  <h2>Działa „tak jak jest”</h2>
-  <p>To zabawka, a nie usługa. Może być niedostępna, stracić dane, zmienić się nie do
-  poznania albo zostać zamknięta zupełnie — bez uprzedzenia i bez zobowiązań z mojej strony.
-  Jeśli rysunek jest dla Ciebie ważny, zapisz go u siebie jako plik: strona zarządzania
-  pokazuje każdą rybkę, a obrazek można pobrać środkami przeglądarki.</p>
-
-  <h2>Nie ma kont — jest kod i hasło</h2>
-  <ul>
-    <li><b>Kod akwarium</b> to zarazem adres strony. Kto ma link, ten może oglądać akwarium,
-      karmić rybki i dodawać nowe. Tak jest celowo: dziecko fotografuje kartkę, wchodząc
-      z linku, a hasło byłoby tam tylko przeszkodą.</li>
-    <li><b>Hasło</b> jest potrzebne do rzeczy nieodwracalnych: usunięcia rybek lub akwarium,
-      zmiany nazwy, zmiany samego hasła.</li>
-    <li>Nie ma skąd ich odzyskać — serwis nie ma poczty ani kont. Jeśli hasło przepadnie,
-      akwarium nadal będzie można oglądać, ale nie da się nim już zarządzać.</li>
-  </ul>
-  <p>Dlatego link do akwarium warto dawać tylko osobom, którym ufasz.</p>
-
-  <h2>Co jest przechowywane</h2>
-  <ul>
-    <li>obrazki pokolorowanych rybek — to, co zostało sfotografowane i wypuszczone do akwarium;</li>
-    <li>nazwa akwarium, którą wymyśliłeś;</li>
-    <li>zrzut sceny — pokazywany jako kafelek na liście akwariów;</li>
-    <li>wgrane przez Ciebie tła;</li>
-    <li>z hasła — wyłącznie jego skrót scrypt z solą; samego hasła na serwerze nie ma.</li>
-  </ul>
-  <p>W przeglądarce, na Twoim urządzeniu, leży dodatkowo lista Twoich akwariów i ich hasła —
-  po to, żeby nie wpisywać kodu za każdym razem. To zwykły magazyn strony
-  (<code>localStorage</code>), nie pliki cookie, i jest niezbędny do działania samego serwisu,
-  dlatego nie ma tu banera o cookies. Dane z urządzenia nie trafiają nigdzie poza ten serwer
-  i znikają razem z danymi witryny w przeglądarce.</p>
-
-  <div class="card">
-    <p><b>Samo akwarium nie prowadzi dziennika połączeń</b>: w jego logu jest tylko „do takiego
-    a takiego akwarium dodano rybkę”, bez adresów. Adres odwiedzającego trzymany jest jeszcze
-    w pamięci operacyjnej przez około godzinę, żeby nikt nie założył stu akwariów w minutę —
-    na dysk nie trafia i znika przy restarcie.</p>
-    <p>Przed akwarium stoi jednak zwykłe proxy webowe i ono, jak to bywa, zapisuje techniczny
-    dziennik połączeń: czas, adres IP, adres strony, kod odpowiedzi. Dziennik zapisuje się
-    w kółko i sam się nadpisuje, służy tylko do ustalenia, co się zepsuło, nie zasila żadnej
-    analityki i nikomu nie jest przekazywany.</p>
-  </div>
-
-  <p>Na stronach nie ma liczników, analityki ani skryptów reklamowych. Dane nie są nikomu
-  przekazywane ani sprzedawane.</p>
-
-  <h2>Usuwanie</h2>
-  <p>Rybki i akwaria usuwa się na stronie zarządzania, hasłem. Usunięte trafia najpierw do
-  kosza na serwerze — na wypadek pomyłki — a <b>po 30 dniach jest kasowane bezpowrotnie</b>,
-  automatycznie.</p>
-  <p>Jeśli hasło przepadło, a dane trzeba usunąć — napisz do
-  <a href="https://t.me/mrmot9i">@mrmot9i</a>, podaj kod akwarium, usunę ręcznie.</p>
-
-  <h2>Odpowiadasz za to, co wgrywasz</h2>
-  <p>Serwis pomyślany jest do dziecięcych rysunków ryb. Wszystko, co tam wysyłasz, jest na Twoją
-  odpowiedzialność: cudzych treści, rzeczy zabronionych prawem i po prostu niestosownych być tam
-  nie powinno. Mam prawo usunąć dowolną treść i zamknąć dostęp do dowolnego akwarium bez
-  wyjaśnień — przede wszystkim wtedy, gdy zobaczę, że serwis jest używany niezgodnie
-  z przeznaczeniem.</p>
-
-  <h2>Dane osobowe (RODO / GDPR)</h2>
-  <p>Serwis prowadzi osoba prywatna mieszkająca w Polsce — ona też jest administratorem danych
-  w rozumieniu RODO. Przetwarzane jest dokładnie to, co wymieniono wyżej, i wyłącznie po to,
-  żeby samo akwarium działało; podstawa prawna to art. 6 ust. 1 lit. f RODO, prawnie uzasadniony
-  interes: pokazać Ci Twoje własne rysunki.</p>
-  <p>Masz prawo dostępu do swoich danych, ich sprostowania, usunięcia, ograniczenia przetwarzania
-  oraz wniesienia sprzeciwu. Wszystko to załatwia się przez
-  <a href="https://t.me/mrmot9i">@mrmot9i</a>: podaj kod akwarium, a odpowiem. Jeśli odpowiedź Cię
-  nie zadowoli, możesz złożyć skargę do organu nadzorczego — w Polsce jest to
-  Prezes Urzędu Ochrony Danych Osobowych (uodo.gov.pl).</p>
-  <p>Serwis nie jest przeznaczony do samodzielnego korzystania przez dzieci poniżej 16 roku życia:
-  akwarium zakłada dorosły i sam decyduje, komu daje link. Dziecko korzysta z niego pod opieką
-  rodzica i za jego zgodą.</p>
-
-  <h2>Modele ryb</h2>
-  <p>Modele 3D ryb pochodzą z kupionego zestawu innego autora, nie są częścią otwartego kodu
-  i rozpowszechniane są na własnej licencji. Otwarty kod projektu jest na licencji MIT.</p>
-
-  <footer>
-    Zasady mogą się zmieniać razem z projektem; obowiązuje ta wersja, którą właśnie czytasz.
-    Pytania i prośby — <a href="https://t.me/mrmot9i">@mrmot9i</a>.
-  </footer>
-  </div>
-
+  <footer>These terms are a project-level template, not legal advice. Review them for the jurisdiction and operator details of the deployment before publishing.</footer>
 </div>
-
-<script src="/assets/i18n.js"></script>
-<script>
-(function () {
-  'use strict';
-
-  var TITLE = {
-    ru: 'Правила и данные — Аквариум с раскрасками',
-    en: 'Terms and data — Paper Aquarium',
-    pl: 'Zasady i dane — Papierowe akwarium'
-  };
-
-  var docs = document.querySelectorAll('.doc');
-
-  function show() {
-    var lang = I18N.lang;
-    docs.forEach(function (d) { d.hidden = d.dataset.doc !== lang; });
-    document.title = TITLE[lang] || TITLE.ru;
-  }
-
-  I18N.mount(document.getElementById('lang'));
-  addEventListener('aqua:lang', show);
-  show();
-})();
-</script>
 </body>
 </html>
