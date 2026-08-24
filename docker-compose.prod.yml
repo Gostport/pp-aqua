@@ -1,16 +1,3 @@
-# Аквариум за Traefik: сервер отдаёт страницы по HTTP внутри докер-сети,
-# наружу торчит только прокси — он же держит HTTPS и сертификат. Своего
-# прокси у аквариума нет намеренно: 80 и 443 на сервере уже заняты Traefik,
-# и второй туда не встанет.
-#
-# Что нужно рядом с этим файлом:
-#   .env    — DOMAIN=aquarium.mrmot9i.com
-#   pack/   — собранный пак моделей (в репозиторий он не входит)
-#   data/   — аквариумы; создаётся сам, но владельца проставить надо (uid 1000)
-#
-# Сеть web общая и живёт отдельно от этого файла — её держит Traefik.
-# Проверить, что она на месте: docker network ls | grep web
-
 services:
   aqua:
     build: .
@@ -18,21 +5,14 @@ services:
     container_name: aqua
     restart: unless-stopped
     environment:
-      # Пределы на случай, когда ссылку узнал кто-то лишний. Подробности —
-      # в LIMITS в server.js.
       AQUA_MAX_TANKS: ${AQUA_MAX_TANKS:-200}
       AQUA_TANKS_PER_HOUR: ${AQUA_TANKS_PER_HOUR:-5}
       AQUA_MAX_FISH: ${AQUA_MAX_FISH:-40}
       AQUA_MAX_BG: ${AQUA_MAX_BG:-8}
       AQUA_MAX_DATA_MB: ${AQUA_MAX_DATA_MB:-2048}
-      # Аквариум-витрина: главная показывает новичкам кнопку «Посмотреть
-      # живой аквариум». Пусто — кнопки нет.
       AQUA_DEMO_TANK: ${AQUA_DEMO_TANK:-}
     volumes:
-      # Аквариумы переживают пересборку образа. Обычная папка, а не том:
-      # внутри детские рисунки, и бэкап их архивом проще, чем через docker.
       - ./data:/app/data
-      # Купленный пак: лежит на сервере, в git его нет. Только чтение.
       - ./pack:/app/assets/models/pack:ro
     expose:
       - "8000"
@@ -45,8 +25,6 @@ services:
       - "traefik.http.routers.aqua.entrypoints=websecure"
       - "traefik.http.routers.aqua.tls.certresolver=letsencrypt"
       - "traefik.http.services.aqua.loadbalancer.server.port=8000"
-      # Сцена тянет three.js и модели рыб — сжатие заметно ускоряет первую
-      # загрузку. Картинки Traefik не жмёт: они и так сжаты.
       - "traefik.http.middlewares.aqua-compress.compress=true"
       - "traefik.http.routers.aqua.middlewares=aqua-compress"
 
