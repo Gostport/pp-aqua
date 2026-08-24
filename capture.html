@@ -1,190 +1,89 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <meta name="theme-color" content="#04101c">
-<title data-t="cap.title">Оживи свою рыбку!</title>
+<title data-t="cap.title">Bring your fish to life!</title>
 <style>
-  :root {
-    --ink: #eaf6ff;
-    --muted: #8aa6bd;
-    --accent: #58d6ff;
-    --ok: #4ade80;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; min-height: 100%; }
-  body {
-    background: linear-gradient(180deg, #06263f 0%, #04101c 100%);
-    color: var(--ink);
-    font: 16px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
-    display: flex; flex-direction: column; align-items: center;
-    padding: 24px 18px 40px;
-    text-align: center;
-  }
-  h1 { font-size: 26px; margin: 8px 0 4px; }
-  .sub { color: var(--muted); font-size: 14px; margin: 0 0 26px; }
-
-  /* Внутри меню аквариума страница живёт как врезка: своя подложка и своя
-     ссылка «назад» там лишние — их даёт карточка меню. */
-  body.embed { background: none; padding: 4px 14px 20px; }
-  body.embed h1 { font-size: 20px; }
-  body.embed .back { display: none; }
-
-  /* Съёмка — тупиковый экран: без этой ссылки вернуться к аквариуму
-     можно только кнопкой «назад» в браузере. */
-  .back {
-    position: fixed; top: 12px; left: 12px; z-index: 5;
-    color: var(--muted); text-decoration: none; font-size: 13px;
-    background: rgba(4, 16, 28, 0.72); border: 1px solid rgba(140, 200, 255, 0.18);
-    border-radius: 999px; padding: 8px 14px;
-  }
-  .back:active { color: var(--ink); }
-
-  .screen { display: none; width: 100%; max-width: 440px; }
-  .screen.on { display: block; }
-
-  .big {
-    display: block; width: 100%;
-    font: inherit; font-size: 19px; font-weight: 600;
-    color: #04101c; background: var(--accent);
-    border: 0; border-radius: 18px;
-    padding: 18px 20px; margin: 14px 0 0;
-    cursor: pointer;
-  }
-  .big:active { transform: translateY(1px); filter: brightness(1.1); }
-  .big.green { background: var(--ok); }
-  .big.ghost {
-    background: transparent; color: var(--muted);
-    border: 1.5px solid rgba(140, 200, 255, 0.3);
-    font-weight: 500;
-  }
-  input[type=file] { display: none; }
-
-  .bubble { font-size: 64px; margin: 10px 0; }
-  .fishname { font-size: 20px; font-weight: 600; margin: 14px 0 2px; }
-
-  .preview {
-    width: 100%; border-radius: 16px; margin-top: 10px;
-    border: 1px solid rgba(140, 200, 255, 0.25);
-    background: #0a2233;
-  }
-  .stage3d {
-    width: 100%; aspect-ratio: 4 / 3; margin-top: 10px;
-    border-radius: 16px; overflow: hidden; position: relative;
-    border: 1px solid rgba(140, 200, 255, 0.25);
-    background:
-      radial-gradient(120% 90% at 50% -10%, rgba(88, 214, 255, 0.25) 0%, transparent 55%),
-      linear-gradient(180deg, #0d4a6b 0%, #04101c 100%);
-  }
-  .stage3d canvas { display: block; width: 100%; height: 100%; }
-  .stage3d .spin3d {
-    position: absolute; inset: 0; display: grid; place-content: center;
-    color: var(--muted); font-size: 13px;
-  }
-
-  /* «Ярче цвета»: светлый карандаш подкручивается прямо на превью,
-     до выпуска. Ползунок — единственная ручка, детям хватает одной. */
-  .boostrow {
-    display: flex; align-items: center; gap: 12px;
-    margin: 14px 2px 0; text-align: left;
-  }
-  .boostrow label { flex: none; color: var(--muted); font-size: 14px; }
-  .boostrow input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
-
-  .spin {
-    width: 44px; height: 44px; margin: 30px auto 12px;
-    border: 4px solid rgba(140, 200, 255, 0.2);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.9s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .err {
-    background: rgba(255, 100, 100, 0.12);
-    border: 1px solid rgba(255, 120, 120, 0.4);
-    border-radius: 14px; padding: 14px 16px;
-    color: #ffc9c9; font-size: 14px; margin-top: 16px;
-    text-align: left;
-  }
-  .hintline { color: var(--muted); font-size: 13px; margin-top: 22px; }
-
-  /* Мост на телефон для больших экранов: выбор файла на компьютере — тупик,
-     а камера всегда в кармане. Белая подложка обязательна: без неё сканер
-     не видит код на тёмном. */
-  .qrrow {
-    display: flex; align-items: center; gap: 14px; text-align: left;
-    margin: 26px auto 0; max-width: 400px;
-    border-top: 1px solid rgba(140, 200, 255, 0.18); padding-top: 20px;
-  }
-  .qrrow .qrbox {
-    flex: none; line-height: 0;
-    background: #fff; border-radius: 10px; padding: 7px;
-  }
-  .qrrow .qrbox svg { display: block; width: 96px; height: 96px; }
-  .qrrow .qrtext { color: var(--muted); font-size: 13px; }
+  :root { --ink:#eaf6ff; --muted:#8aa6bd; --accent:#58d6ff; --ok:#4ade80; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; min-height:100%; }
+  body { background:linear-gradient(180deg,#06263f 0%,#04101c 100%); color:var(--ink); font:16px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif; display:flex; flex-direction:column; align-items:center; padding:24px 18px 40px; text-align:center; }
+  h1 { font-size:26px; margin:8px 0 4px; }
+  .sub { color:var(--muted); font-size:14px; margin:0 0 26px; }
+  body.embed { background:none; padding:4px 14px 20px; }
+  body.embed h1 { font-size:20px; }
+  body.embed .back { display:none; }
+  .back { position:fixed; top:12px; left:12px; z-index:5; color:var(--muted); text-decoration:none; font-size:13px; background:rgba(4,16,28,.72); border:1px solid rgba(140,200,255,.18); border-radius:999px; padding:8px 14px; }
+  .back:active { color:var(--ink); }
+  .screen { display:none; width:100%; max-width:440px; }
+  .screen.on { display:block; }
+  .big { display:block; width:100%; font:inherit; font-size:19px; font-weight:600; color:#04101c; background:var(--accent); border:0; border-radius:18px; padding:18px 20px; margin:14px 0 0; cursor:pointer; }
+  .big:active { transform:translateY(1px); filter:brightness(1.1); }
+  .big.green { background:var(--ok); }
+  .big.ghost { background:transparent; color:var(--muted); border:1.5px solid rgba(140,200,255,.3); font-weight:500; }
+  input[type=file] { display:none; }
+  .camera-panel { display:none; width:100%; margin-top:14px; border-radius:18px; overflow:hidden; border:1px solid rgba(140,200,255,.25); background:#000; position:relative; }
+  .camera-panel.on { display:block; }
+  .camera-panel video { display:block; width:100%; aspect-ratio:3 / 4; object-fit:cover; background:#000; }
+  .camera-controls { display:flex; gap:10px; padding:12px; background:#04101c; }
+  .camera-controls .big { margin:0; flex:1; }
+  .camera-note { color:var(--muted); font-size:13px; margin:12px 2px 0; }
+  .bubble { font-size:64px; margin:10px 0; }
+  .fishname { font-size:20px; font-weight:600; margin:14px 0 2px; }
+  .preview { width:100%; border-radius:16px; margin-top:10px; border:1px solid rgba(140,200,255,.25); background:#0a2233; }
+  .stage3d { width:100%; aspect-ratio:4 / 3; margin-top:10px; border-radius:16px; overflow:hidden; position:relative; border:1px solid rgba(140,200,255,.25); background:radial-gradient(120% 90% at 50% -10%,rgba(88,214,255,.25) 0%,transparent 55%),linear-gradient(180deg,#0d4a6b 0%,#04101c 100%); }
+  .stage3d canvas { display:block; width:100%; height:100%; }
+  .stage3d .spin3d { position:absolute; inset:0; display:grid; place-content:center; color:var(--muted); font-size:13px; }
+  .boostrow { display:flex; align-items:center; gap:12px; margin:14px 2px 0; text-align:left; }
+  .boostrow label { flex:none; color:var(--muted); font-size:14px; }
+  .boostrow input[type=range] { flex:1; min-width:0; accent-color:var(--accent); }
+  .spin { width:44px; height:44px; margin:30px auto 12px; border:4px solid rgba(140,200,255,.2); border-top-color:var(--accent); border-radius:50%; animation:spin .9s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .err { background:rgba(255,100,100,.12); border:1px solid rgba(255,120,120,.4); border-radius:14px; padding:14px 16px; color:#ffc9c9; font-size:14px; margin-top:16px; text-align:left; }
+  .hintline { color:var(--muted); font-size:13px; margin-top:22px; }
+  .qrrow { display:flex; align-items:center; gap:14px; text-align:left; margin:26px auto 0; max-width:400px; border-top:1px solid rgba(140,200,255,.18); padding-top:20px; }
+  .qrrow .qrbox { flex:none; line-height:0; background:#fff; border-radius:10px; padding:7px; }
+  .qrrow .qrbox svg { display:block; width:96px; height:96px; }
+  .qrrow .qrtext { color:var(--muted); font-size:13px; }
 </style>
 </head>
 <body>
-
 <a class="back" id="back" data-t="cap.back"></a>
-
 <h1 data-t="cap.title"></h1>
 <p class="sub" data-t="cap.sub"></p>
-
-<!-- старт -->
 <div class="screen on" id="s-start">
   <div class="bubble">📷</div>
-  <label class="big" for="file" data-t="cap.shoot"></label>
+  <button class="big" id="open-camera" type="button" data-t="cap.camera"></button>
+  <label class="big ghost" for="file" data-t="cap.choose"></label>
   <input type="file" id="file" accept="image/*" capture="environment">
   <p class="hintline" data-t="cap.hint"></p>
-  <div class="qrrow" id="qrrow" hidden>
-    <span class="qrbox" id="cap-qr"></span>
-    <span class="qrtext" data-t="cap.qr"></span>
+  <div class="camera-panel" id="camera-panel">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <div class="camera-controls">
+      <button class="big green" id="take-photo" type="button" data-t="cap.camera.capture"></button>
+      <button class="big ghost" id="close-camera" type="button" data-t="cap.camera.close"></button>
+    </div>
   </div>
+  <p class="camera-note" id="camera-note" hidden></p>
+  <div class="qrrow" id="qrrow" hidden><span class="qrbox" id="cap-qr"></span><span class="qrtext" data-t="cap.qr"></span></div>
 </div>
-
-<!-- обработка -->
-<div class="screen" id="s-busy">
-  <div class="spin"></div>
-  <p id="busy-text" data-t="cap.searching"></p>
-</div>
-
-<!-- превью -->
+<div class="screen" id="s-busy"><div class="spin"></div><p id="busy-text" data-t="cap.searching"></p></div>
 <div class="screen" id="s-preview">
   <p class="fishname" id="p-name"></p>
   <div class="stage3d" id="stage3d"><div class="spin3d" id="spin3d" data-t="cap.reviving"></div></div>
   <img class="preview" id="p-img" data-t-alt="cap.photo" hidden>
-  <div class="boostrow">
-    <label for="boost" data-t="cap.boost"></label>
-    <input type="range" id="boost" min="0" max="100" value="0">
-  </div>
+  <div class="boostrow"><label for="boost" data-t="cap.boost"></label><input type="range" id="boost" min="0" max="100" value="0"></div>
   <button class="big green" id="b-release" data-t="cap.release"></button>
   <label class="big ghost" for="file" data-t="cap.retake"></label>
 </div>
-
-<!-- готово -->
-<div class="screen" id="s-done">
-  <div class="bubble">🎉</div>
-  <p class="fishname" data-t="cap.done"></p>
-  <p class="sub" id="done-sub" data-t="cap.done.sub"></p>
-  <label class="big" for="file" data-t="cap.again"></label>
-</div>
-
-<!-- ошибка -->
-<div class="screen" id="s-error">
-  <div class="bubble">🙈</div>
-  <div class="err" id="err-text"></div>
-  <label class="big" for="file" data-t="cap.retry"></label>
-</div>
-
+<div class="screen" id="s-done"><div class="bubble">🎉</div><p class="fishname" data-t="cap.done"></p><p class="sub" id="done-sub" data-t="cap.done.sub"></p><label class="big" for="file" data-t="cap.again"></label></div>
+<div class="screen" id="s-error"><div class="bubble">🙈</div><div class="err" id="err-text"></div><label class="big" for="file" data-t="cap.retry"></label></div>
 <script src="/assets/i18n.js"></script>
 <script src="/vendor/qr.js"></script>
 <script src="/vendor/three.min.js"></script>
 <script src="/vendor/GLTFLoader.js"></script>
-<!-- до fish-glb.js: он спрашивает у FishFrame оси и голову, иначе половина
-     покупных рыб в превью развернётся хвостом вперёд -->
 <script src="/assets/fish-frame.js"></script>
 <script src="/assets/fish-glb.js"></script>
 <script src="/assets/capture.js"></script>
@@ -192,303 +91,79 @@
 <script>
 (function () {
   'use strict';
-
-  // Снимать не в какой-то абстрактный аквариум, а в конкретный: адрес
-  // страницы /t/<id>/capture говорит, в чей именно уплывёт рыбка.
   if (!Tank.id) { location.replace('/'); return; }
-
   document.getElementById('back').href = Tank.url;
-
-  // Страница открыта внутри меню аквариума — убираем всё, что там повторяется.
   var EMBED = new URLSearchParams(location.search).has('embed');
   if (EMBED) document.body.classList.add('embed');
-
-  // На устройстве без тача «Сфотографировать лист» открывает выбор файла —
-  // тупик: камера у человека в кармане. Показываем мост: QR прямо на эту
-  // страницу, телефон наводится и снимает там.
   if (!matchMedia('(pointer: coarse)').matches && window.qrcode) {
     try {
-      var qr = qrcode(0, 'M');
-      qr.addData(location.origin + Tank.url + '/capture');
-      qr.make();
-      document.getElementById('cap-qr').innerHTML = qr.createSvgTag(4, 0);
-      document.getElementById('qrrow').hidden = false;
-    } catch (e) { /* без QR кнопка выбора файла всё равно работает */ }
+      var qr = qrcode(0, 'M'); qr.addData(location.origin + Tank.url + '/capture'); qr.make();
+      document.getElementById('cap-qr').innerHTML = qr.createSvgTag(4, 0); document.getElementById('qrrow').hidden = false;
+    } catch (e) {}
   }
-
   var inFrame = EMBED && window.parent !== window;
-
-  function tell(msg) {
-    if (!inFrame) return;
-    try { window.parent.postMessage(msg, location.origin); } catch (e) { /* не критично */ }
-  }
-
-  // Аквариум за окном показывает рыбку сразу, не дожидаясь своего опроса.
-  function tellTank() { tell({ aqua: 'fish-added' }); }
-
-  // Экраны съёмки разной высоты — от кнопки до превью с 3D. Врезка не умеет
-  // подстраиваться сама, поэтому свою высоту она сообщает наружу.
-  // Открытое окно подтверждения бывает выше содержимого страницы — тогда
-  // врезке нужна его высота, иначе окно срежется по краям.
-  function frameHeight() {
-    return Math.max(document.body.scrollHeight,
-      (window.Modal && Modal.height && Modal.height()) || 0);
-  }
-
-  function tellHeight() { tell({ aqua: 'height', height: frameHeight() }); }
-
+  function tell(msg) { if (!inFrame) return; try { window.parent.postMessage(msg, location.origin); } catch (e) {} }
+  function tellTank() { tell({ aqua:'fish-added' }); }
+  function frameHeight() { return Math.max(document.body.scrollHeight, (window.Modal && Modal.height && Modal.height()) || 0); }
+  function tellHeight() { tell({ aqua:'height', height:frameHeight() }); }
   if (inFrame) {
     if (window.ResizeObserver) new ResizeObserver(tellHeight).observe(document.body);
-    addEventListener('load', tellHeight);
-    tellHeight();
-
-    // Аквариум не «на большом экране», а прямо за этим окном.
-    var doneSub = document.getElementById('done-sub');
-    doneSub.setAttribute('data-t', 'cap.done.sub.embed');
-    doneSub.textContent = I18N.t('cap.done.sub.embed');
-
-    // Меню открывает съёмку заново — начинать надо с камеры, а не с того
-    // экрана, на котором ушли. Врезка живёт между открытиями, сама она
-    // об этом не узнает, поэтому её будят снаружи.
-    addEventListener('message', function (e) {
-      if (e.origin !== location.origin || !e.data) return;
-      if (e.data.aqua === 'reset') {
-        result = null;
-        show('s-start');
-        tellHeight();
-      }
-    });
+    addEventListener('load', tellHeight); tellHeight();
+    var doneSub = document.getElementById('done-sub'); doneSub.setAttribute('data-t','cap.done.sub.embed'); doneSub.textContent = I18N.t('cap.done.sub.embed');
+    addEventListener('message', function (e) { if (e.origin !== location.origin || !e.data) return; if (e.data.aqua === 'reset') { result=null; stopCamera(); show('s-start'); tellHeight(); } });
   }
-
-  var manifest = null;
-  var result = null;
-
-  // ── 3D-предпросмотр: рыбка с раскраской ребёнка виляет хвостом ───────────
-  var P3 = { ready: false, renderer: null, scene: null, camera: null, mesh: null, geos: {}, raf: 0 };
-
+  var manifest=null, result=null;
+  var P3={ready:false,renderer:null,scene:null,camera:null,mesh:null,geos:{},raf:0};
   function init3D() {
-    if (P3.ready) return true;
-    if (!window.THREE || !window.FishGLB) return false;
-    try {
-      P3.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    } catch (e) { return false; }
-    P3.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    P3.renderer.outputEncoding = THREE.sRGBEncoding;
-    document.getElementById('stage3d').appendChild(P3.renderer.domElement);
-    P3.scene = new THREE.Scene();
-    P3.camera = new THREE.PerspectiveCamera(42, 4 / 3, 0.1, 50);
-    P3.camera.position.set(0, 0.4, 3.1);
-    P3.camera.lookAt(0, 0, 0);
-    P3.scene.add(new THREE.HemisphereLight(0xbfe4ff, 0x1a3550, 0.95));
-    var dir = new THREE.DirectionalLight(0xffffff, 1.1);
-    dir.position.set(2, 4, 3);
-    P3.scene.add(dir);
-    P3.ready = true;
-    return true;
+    if (P3.ready) return true; if (!window.THREE || !window.FishGLB) return false;
+    try { P3.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true}); } catch (e) { return false; }
+    P3.renderer.setPixelRatio(Math.min(devicePixelRatio,2)); P3.renderer.outputEncoding=THREE.sRGBEncoding;
+    document.getElementById('stage3d').appendChild(P3.renderer.domElement); P3.scene=new THREE.Scene();
+    P3.camera=new THREE.PerspectiveCamera(42,4/3,.1,50); P3.camera.position.set(0,.4,3.1); P3.camera.lookAt(0,0,0);
+    P3.scene.add(new THREE.HemisphereLight(0xbfe4ff,0x1a3550,.95)); var dir=new THREE.DirectionalLight(0xffffff,1.1); dir.position.set(2,4,3); P3.scene.add(dir); P3.ready=true; return true;
   }
-
-  // Геометрия вида с планарной UV бокового силуэта — та же рамка,
-  // по которой capture.js кадрирует текстуру. Кэш по виду.
-  function fishGeo(kind, cb) {
-    if (P3.geos[kind]) return cb(P3.geos[kind]);
-    var fish = null;
-    manifest.fish.forEach(function (f) { if (f.name === kind) fish = f; });
-    if (!fish) return cb(null);
-    var spec = { url: fish.model, length: 2.4 };
-    FishGLB.load([spec], function () {
-      if (!spec.gltf) return cb(null);
-      var geo = FishGLB.bake(spec);
-      geo.computeBoundingBox();
-      var bb = geo.boundingBox;
-      var sz = Math.max(bb.max.z - bb.min.z, 1e-6), sy = Math.max(bb.max.y - bb.min.y, 1e-6);
-      var p = geo.attributes.position;
-      var uv = new Float32Array(p.count * 2);
-      for (var i = 0; i < p.count; i++) {
-        uv[i * 2] = (p.getZ(i) - bb.min.z) / sz;
-        uv[i * 2 + 1] = (p.getY(i) - bb.min.y) / sy;
-      }
-      geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-      geo.userData.range = [bb.min.z, bb.max.z];
-      P3.geos[kind] = geo;
-      cb(geo);
-    });
+  function fishGeo(kind,cb) {
+    if (P3.geos[kind]) return cb(P3.geos[kind]); var fish=null; manifest.fish.forEach(function(f){if(f.name===kind) fish=f;}); if(!fish) return cb(null);
+    var spec={url:fish.model,length:2.4}; FishGLB.load([spec],function(){ if(!spec.gltf) return cb(null); var geo=FishGLB.bake(spec); geo.computeBoundingBox(); var bb=geo.boundingBox; var sz=Math.max(bb.max.z-bb.min.z,1e-6), sy=Math.max(bb.max.y-bb.min.y,1e-6); var s=2.2/Math.max(sz,sy); geo.scale(s,s,s); P3.geos[kind]=geo; cb(geo); });
   }
-
   function show3D(kind) {
-    var flat = document.getElementById('p-img');
-    var spin = document.getElementById('spin3d');
-    spin.style.display = '';
-    if (!init3D()) {
-      document.getElementById('stage3d').style.display = 'none';
-      flat.hidden = false;
-      flat.src = result.preview;
-      return;
-    }
-    fishGeo(kind, function (geo) {
-      if (!geo) {
-        document.getElementById('stage3d').style.display = 'none';
-        flat.hidden = false;
-        flat.src = result.preview;
-        return;
-      }
-      if (P3.mesh) {
-        P3.scene.remove(P3.mesh);
-        if (P3.mesh.material.map) P3.mesh.material.map.dispose();
-        P3.mesh.material.dispose();
-      }
-      // Текстура прямо из канваса, а не через dataURL: ползунок «Ярче цвета»
-      // перерисовывает канвас, и рыбке хватает needsUpdate — без PNG.
-      var tex = new THREE.CanvasTexture(result.boost.texCanvas);
-      tex.encoding = THREE.sRGBEncoding;
-      var mat = new THREE.MeshStandardMaterial({
-        map: tex, roughness: 0.5, metalness: 0.05, side: THREE.DoubleSide
-      });
-      FishGLB.addBend(mat, {
-        bodyMask: new THREE.Vector3(0, 0, 1),
-        latMask: new THREE.Vector3(1, 0, 0),
-        range: geo.userData.range,
-        headAtMax: true
-      }, 0.4, Math.random() * 6.28);
-      P3.mesh = new THREE.Mesh(geo, mat);
-      P3.scene.add(P3.mesh);
-      spin.style.display = 'none';
-      startLoop();
+    if(!init3D()) return; var stage=document.getElementById('stage3d'), spin=document.getElementById('spin3d'); spin.style.display='grid';
+    fishGeo(kind,function(geo){
+      if(!geo){spin.textContent='3D preview unavailable';return;} if(P3.mesh) P3.scene.remove(P3.mesh);
+      var mat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.78,metalness:.02});
+      if(result&&result.texture){var tex=new THREE.TextureLoader().load(result.texture);tex.encoding=THREE.sRGBEncoding;mat.map=tex;}
+      P3.mesh=new THREE.Mesh(geo,mat);P3.scene.add(P3.mesh);spin.style.display='none';
+      function resize(){var w=stage.clientWidth,h=stage.clientHeight;P3.camera.aspect=w/h;P3.camera.updateProjectionMatrix();P3.renderer.setSize(w,h,false);} resize();
+      if(!P3.raf){function frame(t){if(P3.mesh){P3.mesh.rotation.y=Math.PI/2+Math.sin(t*.0005)*.55;P3.mesh.position.y=Math.sin(t*.0009)*.07;}P3.renderer.render(P3.scene,P3.camera);P3.raf=requestAnimationFrame(frame);}P3.raf=requestAnimationFrame(frame);}
     });
   }
-
-  function startLoop() {
-    cancelAnimationFrame(P3.raf);
-    var t0 = performance.now();
-    function frame(now) {
-      P3.raf = requestAnimationFrame(frame);
-      var box = document.getElementById('stage3d');
-      if (!box.offsetParent) return;   // экран превью скрыт
-      var w = box.clientWidth, h = box.clientHeight;
-      var el = P3.renderer.domElement;
-      if (el.clientWidth !== w || el.clientHeight !== h) {
-        P3.renderer.setSize(w, h, false);
-        P3.camera.aspect = w / h;
-        P3.camera.updateProjectionMatrix();
-      }
-      var t = (now - t0) / 1000;
-      FishGLB.uTime.value = t;
-      if (P3.mesh) {
-        // боком к зрителю, с лёгким поворотом туда-сюда
-        P3.mesh.rotation.y = Math.PI / 2 + Math.sin(t * 0.5) * 0.55;
-        P3.mesh.position.y = Math.sin(t * 0.9) * 0.07;
-      }
-      P3.renderer.render(P3.scene, P3.camera);
-    }
-    P3.raf = requestAnimationFrame(frame);
+  function show(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');});document.getElementById(id).classList.add('on');if(inFrame)setTimeout(tellHeight,0);}
+  fetch('/assets/coloring/manifest.json').then(function(r){return r.json();}).then(function(m){manifest=m;}).catch(function(){show('s-error');document.getElementById('err-text').textContent=I18N.t('cap.err.manifest');});
+  function loadBitmap(file){
+    if(window.createImageBitmap){return createImageBitmap(file,{imageOrientation:'from-image'}).catch(function(){return createImageBitmap(file);});}
+    return new Promise(function(resolve,reject){var img=new Image();img.onload=function(){resolve(img);};img.onerror=reject;img.src=URL.createObjectURL(file);});
   }
-
-  function show(id) {
-    document.querySelectorAll('.screen').forEach(function (s) { s.classList.remove('on'); });
-    document.getElementById(id).classList.add('on');
-  }
-
-  fetch('/assets/coloring/manifest.json')
-    .then(function (r) { return r.json(); })
-    .then(function (m) { manifest = m; })
-    .catch(function () {
-      show('s-error');
-      document.getElementById('err-text').textContent = I18N.t('cap.err.manifest');
-    });
-
-  // EXIF-поворот телефонных фото разруливает createImageBitmap
-  function loadBitmap(file) {
-    if (window.createImageBitmap) {
-      return createImageBitmap(file, { imageOrientation: 'from-image' })
-        .catch(function () { return createImageBitmap(file); });
-    }
-    return new Promise(function (resolve, reject) {
-      var img = new Image();
-      img.onload = function () { resolve(img); };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
-  window.handlePhoto = function (source) {   // отдельно — для автотестов
-    show('s-busy');
-    return FishCapture.processPhoto(source, manifest).then(function (r) {
-      result = r;
-      document.getElementById('p-name').textContent =
-        I18N.t('cap.itis', { name: (r.titles && (r.titles[I18N.lang] || r.titles.ru)) || r.title });
-      // ползунок стартует с авто-положения: бледный рисунок уже подкручен
-      document.getElementById('boost').value = Math.round(r.boost.auto * 100);
-      show('s-preview');
-      show3D(r.kind);
-      return r;
-    }, function (err) {
-      document.getElementById('err-text').textContent = String(err.message || err);
-      show('s-error');
-      throw err;
-    });
+  window.handlePhoto=function(source){
+    if(!manifest)return Promise.reject(new Error(I18N.t('cap.err.manifest'))); show('s-busy');
+    return FishCapture.processPhoto(source,manifest).then(function(r){result=r;document.getElementById('p-name').textContent=I18N.t('cap.itis',{name:(r.titles&&(r.titles[I18N.lang]||r.titles.en||r.titles.pl))||r.title});document.getElementById('boost').value=Math.round(r.boost.auto*100);show('s-preview');show3D(r.kind);return r;},function(err){document.getElementById('err-text').textContent=String(err.message||err);show('s-error');throw err;});
   };
-
-  // Живая подстройка: пиксели пересчитываются из сырой копии, 3D-текстура
-  // обновляется через needsUpdate. Во время протяжки события схлопывает
-  // rAF-затвор, но rAF — только оптимизация: в перекрытой вкладке Chrome
-  // его замораживает, поэтому отпускание ползунка ('change') и отправка
-  // применяют значение синхронно, иначе рыбка уплывёт неподкрученной.
-  var boostEl = document.getElementById('boost');
-  var boostQueued = false;
-  function applyBoost() {
-    boostQueued = false;
-    if (!result || !result.boost) return;
-    var v = boostEl.value / 100;
-    if (result.boost.value === v) return;
-    result.boost.set(v);
-    if (P3.mesh && P3.mesh.material.map) P3.mesh.material.map.needsUpdate = true;
-    var flat = document.getElementById('p-img');
-    if (!flat.hidden) flat.src = result.boost.pvCanvas.toDataURL('image/png');
+  var boostEl=document.getElementById('boost'), boostQueued=false;
+  function applyBoost(){boostQueued=false;if(!result||!result.boost)return;var v=boostEl.value/100;if(result.boost.value===v)return;result.boost.set(v);if(P3.mesh&&P3.mesh.material.map)P3.mesh.material.map.needsUpdate=true;var flat=document.getElementById('p-img');if(!flat.hidden)flat.src=result.boost.pvCanvas.toDataURL('image/png');}
+  boostEl.addEventListener('input',function(){if(!boostQueued){boostQueued=true;requestAnimationFrame(applyBoost);}});boostEl.addEventListener('change',applyBoost);
+  var cameraStream=null,cameraVideo=document.getElementById('camera-video'),cameraPanel=document.getElementById('camera-panel'),cameraNote=document.getElementById('camera-note');
+  function stopCamera(){if(cameraStream){cameraStream.getTracks().forEach(function(track){track.stop();});cameraStream=null;}cameraVideo.srcObject=null;cameraPanel.classList.remove('on');}
+  function cameraMessage(key){cameraNote.textContent=I18N.t(key);cameraNote.hidden=false;}
+  function openCamera(){
+    cameraNote.hidden=true;
+    if(!window.isSecureContext){cameraMessage('cap.camera.https');return;}
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){cameraMessage('cap.camera.unsupported');return;}
+    navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}}).then(function(stream){cameraStream=stream;cameraVideo.srcObject=stream;cameraPanel.classList.add('on');return cameraVideo.play();}).catch(function(err){if(err&&(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'))cameraMessage('cap.camera.permission');else cameraMessage('cap.camera.unsupported');});
   }
-  boostEl.addEventListener('input', function () {
-    if (!boostQueued) { boostQueued = true; requestAnimationFrame(applyBoost); }
-  });
-  boostEl.addEventListener('change', applyBoost);
-
-  document.getElementById('file').addEventListener('change', function () {
-    var file = this.files && this.files[0];
-    this.value = '';
-    if (!file || !manifest) return;
-    show('s-busy');
-    loadBitmap(file).then(window.handlePhoto, function () {
-      document.getElementById('err-text').textContent = I18N.t('cap.err.photo');
-      show('s-error');
-    });
-  });
-
-  window.releaseFish = function () {         // отдельно — для автотестов
-    if (!result) return Promise.reject(new Error(I18N.t('cap.err.nofish')));
-    applyBoost();   // страховка: rAF мог не успеть — уходит то, что на ползунке
-    document.getElementById('busy-text').textContent = I18N.t('cap.sending');
-    show('s-busy');
-    return fetch(Tank.api + '/fish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // текстура запекается с текущим положением ползунка — в аквариум
-      // уплывает то, что человек видел на превью
-      body: JSON.stringify({
-        kind: result.kind,
-        texture: result.boost ? result.boost.bake().texture : result.texture
-      })
-    }).then(function (r) {
-      if (!r.ok) throw new Error(I18N.t('cap.err.status', { code: r.status }));
-      return r.json();
-    }).then(function (r) {
-      show('s-done');
-      tellTank();
-      return r;
-    }, function (err) {
-      document.getElementById('err-text').textContent = I18N.t('cap.err.send', { msg: err.message || err });
-      show('s-error');
-      throw err;
-    });
-  };
-
-  document.getElementById('b-release').addEventListener('click', function () { window.releaseFish(); });
+  function takePhoto(){if(!cameraStream||!cameraVideo.videoWidth)return;var canvas=document.createElement('canvas');canvas.width=cameraVideo.videoWidth;canvas.height=cameraVideo.videoHeight;canvas.getContext('2d').drawImage(cameraVideo,0,0,canvas.width,canvas.height);stopCamera();window.handlePhoto(canvas);}
+  document.getElementById('open-camera').addEventListener('click',openCamera);document.getElementById('take-photo').addEventListener('click',takePhoto);document.getElementById('close-camera').addEventListener('click',stopCamera);
+  document.getElementById('file').addEventListener('change',function(){var file=this.files&&this.files[0];this.value='';if(!file||!manifest)return;loadBitmap(file).then(window.handlePhoto,function(){document.getElementById('err-text').textContent=I18N.t('cap.err.photo');show('s-error');});});
+  window.releaseFish=function(){stopCamera();if(!result)return Promise.reject(new Error(I18N.t('cap.err.nofish')));applyBoost();document.getElementById('busy-text').textContent=I18N.t('cap.sending');show('s-busy');return fetch(Tank.api+'/fish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:result.kind,texture:result.boost?result.boost.bake().texture:result.texture})}).then(function(r){if(!r.ok)throw new Error(I18N.t('cap.err.status',{code:r.status}));return r.json();}).then(function(r){show('s-done');tellTank();return r;},function(err){document.getElementById('err-text').textContent=I18N.t('cap.err.send',{msg:err.message||err});show('s-error');throw err;});};
+  document.getElementById('b-release').addEventListener('click',function(){window.releaseFish();});
 })();
 </script>
 </body>
