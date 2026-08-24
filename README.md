@@ -1,293 +1,195 @@
-**English** · [Русский](README.ru.md)
+# PP Aqua
 
-# Paper Aquarium
+PP Aqua is a small interactive aquarium for children. A child colours a printed fish sheet, photographs it with a phone, and the fish appears in a 3D aquarium on a larger screen.
 
-A home game for a child, in the spirit of teamLab's *Sketch Aquarium*: print
-a sheet, colour it with markers, take a photo with a phone — and the fish
-starts swimming in an aquarium on the big screen.
-
-```
-A4 colouring sheet  →  phone photo  →  texture  →  3D fish in the scene
+```text
+A4 colouring sheet → phone photo → captured texture → 3D fish
 ```
 
-The server is plain Node with zero dependencies, the scene is three.js, and
-everything the game owns lives in `data/`.
+The project is intentionally lightweight: a plain Node.js server with no application dependencies, browser JavaScript, three.js, SVG colouring sheets, and JSON manifests. Everything created by users lives under `data/`.
 
-Questions, ideas and "it won't start for me" — the project chat:
-[t.me/+5PkSBR1C6LtmOTM0](https://t.me/+5PkSBR1C6LtmOTM0).
+## What it does
 
-![An aquarium with fish coloured by a child](docs/screenshots/aquarium.jpg)
-
-| | |
-|---|---|
-| ![The aquarium menu](docs/screenshots/menu.jpg) | ![The capture screen](docs/screenshots/capture.jpg) |
-| Tap anywhere — a menu with every road out | The sheet is photographed right there, in a frame |
-| ![Colouring sheets](docs/screenshots/print.jpg) | ![Fish from the pack](docs/screenshots/pack.jpg) |
-| Twelve A4 sheets with markers in the corners | Ready-made fish, when there is no time to colour |
-
-More: [the list of fish with their drawings](docs/screenshots/fish-list.jpg),
-[choosing a background](docs/screenshots/backgrounds.jpg),
-[the list of aquariums](docs/screenshots/home.jpg).
+- Print an A4 fish colouring sheet.
+- Colour it with markers.
+- Photograph the whole sheet with a phone.
+- Detect the four corner markers and correct perspective.
+- Extract the drawing using the fish contour in the manifest.
+- Apply the drawing as a texture to the corresponding 3D fish.
+- Let fish swim in a three.js aquarium.
+- Feed fish, change backgrounds, remove fish, and manage aquariums.
+- Open an aquarium on another screen with a QR code, link, or temporary TV PIN.
+- Offer a public showcase aquarium when `AQUA_DEMO_TANK` is configured.
 
 ## How it works
 
-**The colouring sheet.** Four black 6×6 markers in the corners: their 16 inner
-cells encode the species and the corner number. The capture step uses them to
-find the sheet in a photo and undo the perspective — the markers must stay
-uncoloured, everything else is fair game. The fish outline is printed as a thin
-grey line and the fin areas as a pale dashed one, so they are visible without
-the child taking the hint for part of the drawing.
+### The colouring sheet
 
-**Capture.** `assets/capture.js` looks for the markers by sweeping brightness
-thresholds, undoes the perspective, cuts the drawing along the species contour
-from the manifest and trims a strip along the printed line itself — otherwise
-it would stay as a dark rim on the fish. The result is a texture, mapped onto
-the 3D model through a planar unwrap of its side silhouette.
+Each sheet has four black 6×6 markers. Their 16 inner cells encode the fish species and corner orientation. The markers must remain uncoloured. The fish outline is printed as a thin grey line and fin areas use a pale dashed line so the child can colour the fish without mistaking the guide marks for part of the drawing.
 
-**The aquarium.** `demos/realistic-tank.html`: the fish swim inside a volume
-that follows the camera frustum rather than a box — against a box, fish near
-the far wall would huddle towards the centre of the screen. The scene works out
-the model's orientation (where the nose is, where the back is) on its own, from
-the tail beats in the animation: `assets/fish-frame.js`.
+### Capture
 
-**The menu.** A tap anywhere in the aquarium opens the menu: capture, ready-made
-fish from the pack, food, colouring sheets, background, removing fish and
-“Open on another screen” — a QR code, a link and a five-digit TV code.
-Capture, background and sheets open right there in a frame — they are the
-same pages (`?embed=1`), not copies of them.
+`assets/capture.js` searches brightness thresholds for the four markers, corrects the sheet perspective, extracts the drawing using the species contour in `manifest.json`, and trims the printed outline so it does not remain as a dark edge on the captured fish.
 
-**The showcase.** The `AQUA_DEMO_TANK` variable turns one aquarium into
-a public showcase: the home page offers newcomers a “Peek at a live
-aquarium” card, and a `?demo` link opens it with a trimmed menu — feed the
-fish or start your own. A screen opened with a PIN (`?tv`) never pops the
-menu by itself: that screen is for watching, the phone is for driving.
+The resulting image is mapped onto the 3D model through a planar unwrap of its side silhouette.
 
-**Languages.** Russian, English and Polish; on the first visit the device
-language is used, after that whatever the switcher was set to. All strings live
-in `assets/i18n.js` and the markup is annotated with `data-t` attributes. The
-colouring sheets are trilingual too: the caption under the fish is printed in
-the language of the page, while the corner markers are identical in every
-version — any printed sheet is recognised.
+### Aquarium
 
-## Running it
+`demos/realistic-tank.html` contains the main three.js scene. Fish swim inside a volume derived from the camera frustum rather than a simple box. `assets/fish-frame.js` determines model orientation from animation so different fish can share the same swimming system.
 
-```bash
-node server.js          # http://localhost:8000
-```
+### Menu and second-screen mode
 
-Node 18+ is required. There is nothing to install: no dependencies, and
-three.js sits in `vendor/`. The port is set by `PORT`.
+A tap in the aquarium opens the menu. It provides capture, ready-made fish, feeding, colouring sheets, backgrounds, fish removal, and second-screen controls.
 
-The server prints the addresses of every network interface — use them to open
-the aquarium from a phone or a TV on the same Wi-Fi.
+Second-screen mode provides a QR code, a share link, and a temporary five-digit TV PIN. A screen opened with the PIN is a viewing screen. The phone remains the control surface.
 
-## Access
+### Showcase mode
 
-There are no accounts. Every aquarium has a 10-character code (which is also
-its address) and a password:
+Set `AQUA_DEMO_TANK` to an aquarium code to make that aquarium a public showcase. The home page can offer newcomers a live-aquarium preview, while the showcase menu is intentionally limited.
 
-| | code (the link) | password |
-|---|---|---|
-| watch the aquarium | ✅ | |
-| add a fish, feed them, change the background | ✅ | |
-| delete fish or the aquarium, rename it | | ✅ |
+## Languages
 
-Capture and feeding are deliberately password-free: the child opens the link on
-a phone, and asking for a password there would kill the whole idea. Nothing can
-be spoiled that way — everything irreversible is behind the password.
+The interface supports **English and Polish**.
 
-For a TV there is a shortcut: “Open on another screen” in the aquarium
-menu hands out a temporary five-digit code (lives 5 minutes, kept in the
-server's memory). It goes into the same field on the home page as the
-regular code; guessing is choked by a growing per-address pause.
+The localization system is centralized in `assets/i18n.js`. Language selection is stored in `localStorage`, and English is the fallback. The same localization system is used by the aquarium UI, capture screen, management UI, and printable-sheet page.
 
-The code is long on purpose: 31¹⁰ ≈ 8·10¹⁴ combinations, so somebody else's
-drawings cannot be found by guessing. A five-digit code (100,000 combinations)
-would be brute-forced in minutes. The password is protected by a pause after
-five misses, growing to ten minutes.
+Printable sheets have English and Polish versions. The corner markers are identical in both versions, so either language can be recognized by the capture system.
 
-## Deployment
+## Running locally
 
-Everything a server needs sits next to the code: `Dockerfile`,
-`docker-compose.prod.yml` and `.env.example`. The aquarium is a single
-container with no proxy of its own: HTTPS, the domain and the certificate are
-handled by Traefik through the external `web` network. The order of steps,
-backups and the usual breakages are in [DEPLOY.md](DEPLOY.md) (in Russian).
+Requirements:
 
-```bash
-cp .env.example .env      # DOMAIN
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-```
+- Node.js 18 or newer.
+- No `npm install` is required for the main application.
+- three.js is included under `vendor/`.
 
-The model pack never enters the image — it is mounted from the server as
-a volume.
-
-## What to know before putting it on the open internet
-
-- **The password travels in plain text** in the `X-Tank-Pass` header. Inside
-  a home network that is acceptable; on the internet HTTPS is mandatory, and
-  the proxy provides it. On the server only a salted scrypt hash of the
-  password is stored.
-- **Adding fish and uploading backgrounds without a password** is a deliberate
-  decision: the child opens capture from a link on a phone. So that nobody can
-  fill the disk with it, there are limits (all of them environment variables):
-
-  | Variable | Default | What it limits |
-  |---|---|---|
-  | `AQUA_MAX_TANKS` | 200 | aquariums on the server in total |
-  | `AQUA_TANKS_PER_HOUR` | 5 | new aquariums from one address per hour |
-  | `AQUA_MAX_FISH` | 40 | fish in a single aquarium |
-  | `AQUA_MAX_BG` | 8 | custom backgrounds in a single aquarium |
-  | `AQUA_MAX_DATA_MB` | 2048 | the size of the whole `data/` folder |
-  | `AQUA_DEMO_TANK` | — | code of a showcase aquarium: the home page offers newcomers a “Peek at a live aquarium” button |
-
-  Plus hard limits per picture: 3 MB for a fish, 6 MB for a background, 12 MB
-  for the request body.
-- The server only serves what `staticFor()` lists: the pages, `assets/`,
-  `vendor/`, `demos/`, `tools/`, and from `data/` — nothing but scene snapshots
-  and uploaded backgrounds. Everything else, including `.git` and `server.js`
-  itself, gets a 404.
-
-## The fish models: what to buy and where to put it
-
-The fish are not in this repository and cannot be: the game uses a purchased
-pack whose licence allows use but forbids redistributing the files. Without the
-models everything still starts, but the aquarium stays empty. Four steps get
-them swimming — about fifteen minutes including the download.
-
-**1. Buy the pack**
-
-[Coral Reef Fish Collection animated — Game Ready pack 8](https://www.cgtrader.com/3d-model-collections/coral-reef-fish-collection-animated-game-ready-pack-8)
-by JosKata, on CGTrader. Thirty reef fish with skeletal animation, Royalty Free
-licence.
-
-This exact pack is not strictly required — any fish will do, see "Other models"
-below. But the colouring sheets in this repository were traced from it, and
-without rebuilding the sheets the species will not match.
-
-**2. Lay out the files**
-
-From the download you only need the **`fbx` folder** — thirty `.fbx` files. The
-textures are already embedded in them; the separate `.rar` archives in
-`textures/` do not need unpacking (they are only useful if you want to rebuild
-the pack at the original resolution).
-
-```
-paper-aquarium/
-└── купил 3д рыбок/          ← "the 3D fish I bought"
-    └── fbx/
-        ├── Auriga Butterflyfish.fbx
-        ├── Bicolor Angelfish.fbx
-        └── … 30 files in total
-```
-
-The folder `купил 3д рыбок/` is in `.gitignore` — your purchase stays yours.
-The name can be changed, in which case the path is passed to the script:
-`-Pack "your\folder"`.
-
-**3. Convert to glTF**
-
-You will need the FBX2glTF converter (Windows, PowerShell):
-
-```powershell
-npm install --no-save fbx2gltf
-
-# the path inside the package depends on the version — let PowerShell find it
-$env:FBX2GLTF = (Get-ChildItem node_modules -Recurse -Filter FBX2glTF.exe)[0].FullName
-
-powershell -ExecutionPolicy Bypass -File tools\convert-pack.ps1
-```
-
-The script unpacks every fish, squeezes the textures down to 1024 px JPEG (the
-originals are 2048×2048 PNGs of 3–4 MB each — 110 MB per pack instead of 12),
-fixes the alpha channel that makes some fish arrive invisible, and lays out the
-result:
-
-```
-assets/models/pack/
-├── clownfish/
-│   ├── clownfish.gltf
-│   ├── buffer.bin
-│   └── clownfish_basecolor_COLOR.jpg
-├── bluetang/
-└── … 28 folders + pack.json
-```
-
-Twenty-eight, not thirty: two fish in the pack have no embedded textures or
-empty geometry, so the script drops them and says so in the console.
-
-**4. Check**
+Start the server:
 
 ```bash
 node server.js
 ```
 
-Open `http://localhost:8000`, create an aquarium, tap it and choose
-"🐠 Release a ready-made fish" — you should see 12 cards with thumbnails.
-Twelve, not twenty-eight: only species that have a colouring sheet make it into
-the picker — what can be coloured is what swims. The full list of converted
-models is served by `http://localhost:8000/api/pack` (28 there, with
-`sheet: true` on the species that have a sheet). Empty means the pack was not
-built — look for "пропуск" ("skipped") lines in the script's output.
+Open:
 
-### Other models
+```text
+http://localhost:8000
+```
 
-The script is tailored to this pack and to Windows (it resizes textures with
-System.Drawing). Any `.glb`/`.gltf` files of your own go into
-`assets/models/pack/` by hand — one folder per species, with a `pack.json`
-listing them next to it.
+The server also prints LAN addresses so a phone or TV on the same Wi-Fi can open the aquarium.
 
-The species in the game are defined by `assets/coloring/manifest.json`, which is
-built from the silhouettes of the models. So a different set of fish means the
-sheets have to be rebuilt: `/tools/silhouettes.html` → `node
-tools/make-coloring.js`. Model requirements, how to add a species and the
-conversion pitfalls are in
-[assets/models/README.md](assets/models/README.md) (in Russian).
+## Access model
 
-## Tools
+There are no user accounts.
 
-| What | Where | Why |
-|---|---|---|
-| Silhouettes | `/tools/silhouettes.html` | traces the pack models, produces `contours.json` and the fins drawn over the body |
-| Sheets | `node tools/make-coloring.js` | builds 12 A4 sheets in three languages plus the manifest |
-| Capture test | `/tools/test-capture.html` | runs every sheet through skew, rotation and noise |
-| Pack build | `tools/convert-pack.ps1` | FBX from the purchased archive → glTF |
+| Action | Aquarium code | Password |
+|---|:---:|:---:|
+| Watch aquarium | ✓ | |
+| Add a fish | ✓ | |
+| Feed fish | ✓ | |
+| Change background | ✓ | |
+| Remove fish | | ✓ |
+| Delete aquarium | | ✓ |
+| Rename aquarium | | ✓ |
+| Change password | | ✓ |
 
-After the sheets change, the capture test must report no failures: the markers
-are chosen so that the codes of any two species differ in at least four cells.
+The long aquarium code is deliberate. The identifier uses 31 characters and 10 positions, giving about 8×10^14 possible combinations. The temporary five-digit TV PIN is not an authentication credential. It only grants the same access as the aquarium link and expires after five minutes.
 
-## Data
+Password attempts are throttled after repeated failures. Passwords are stored on the server only as salted scrypt hashes.
 
-Everything lives in `data/tanks/<code>/`: `meta.json` (name, salt and password
-hash), `settings.json` (background), `fish/` (drawings and their descriptions),
-`backgrounds/` (uploaded backgrounds), `preview.jpg` (the snapshot for the
-card). Deleted things move to `trash/` and `data/trash-tanks/` instead of being
-erased: there are children's drawings inside.
+## Configuration
 
-Deleted items stay in the trash for 30 days (`AQUA_TRASH_DAYS`) and are then
-erased for good: a child deletes a drawing by accident and it has to be
-recoverable, but an eternal trash bin on a public server is a warehouse of
-other people's children's drawings that they believe are deleted.
+| Variable | Default | Purpose |
+|---|---:|---|
+| `PORT` | `8000` | HTTP listening port |
+| `AQUA_MAX_TANKS` | `200` | Maximum aquariums on the server |
+| `AQUA_TANKS_PER_HOUR` | `5` | New aquariums allowed per client address per hour |
+| `AQUA_MAX_FISH` | `40` | Maximum fish in one aquarium |
+| `AQUA_MAX_BG` | `8` | Maximum custom backgrounds in one aquarium |
+| `AQUA_MAX_DATA_MB` | `2048` | Maximum size of the `data/` directory |
+| `AQUA_TRASH_DAYS` | `30` | Retention period for deleted content |
+| `AQUA_DEMO_TANK` | empty | Aquarium code used for the public showcase |
 
-The `data/` folder is not part of the repository — it is one family's data.
-A backup of the game is a copy of that folder.
+Image limits are 3 MB per fish, 6 MB per background, and 12 MB per request body.
 
-For a public server there is a [Terms and data](terms.html) page
-(`/terms.html`): what is stored, how long it lives, how to get it deleted, GDPR
-rights and a contact. The server itself keeps no access log: it only writes
-"a fish was added to such and such aquarium", with no addresses. Check what the
-proxy in front of it writes — either turn its access log off, or leave the terms
-text as it is (it already says that the proxy keeps such a log). Details are
-under "Журнал обращений" in [DEPLOY.md](DEPLOY.md).
+## Data model
 
-## Licence
+Each aquarium lives under:
 
-The code is [MIT](LICENSE). The aquarium backgrounds in `assets/backgrounds/`
-were made by the author of the project and come under the same terms.
+```text
+data/tanks/<10-character-code>/
+├── meta.json
+├── settings.json
+├── preview.jpg
+├── fish/
+├── backgrounds/
+└── trash/
+```
 
-The fish models are not covered by the project licence: the pack is bought
-separately and is not part of the repository. The silhouettes in
-`assets/coloring/*.svg`, `tools/contours.json` and
-`assets/coloring/manifest.json` were traced from the pack models — they are
-derived 2D contours, not the models themselves, and for a different set of fish
-they are rebuilt from scratch.
+Deleted aquariums move to `data/trash-tanks/`. Deleted drawings stay recoverable for `AQUA_TRASH_DAYS` days before permanent removal.
+
+The `data/` directory is not part of the repository. A backup of the application data is a backup of that directory.
+
+## Deployment
+
+The production setup uses one Node container behind an external reverse proxy. The repository includes `Dockerfile`, `docker-compose.prod.yml`, and `.env.example`.
+
+The container exposes port 8000 only to the Docker network. HTTPS, the domain, and certificates are handled by the reverse proxy.
+
+See `DEPLOY.md` for deployment, backups, proxy configuration, and troubleshooting.
+
+## Public deployment security
+
+The application is designed first for a trusted home network. If it is exposed to the public internet:
+
+- HTTPS is mandatory because the aquarium password is sent in the `X-Tank-Pass` request header.
+- Keep the reverse proxy in front of the application.
+- Keep upload and storage limits enabled.
+- Review reverse-proxy access logging and retention.
+- Back up `data/` separately from the application image.
+
+The server deliberately allows adding fish and backgrounds with the aquarium link because the intended capture workflow is phone-first and child-friendly. Irreversible actions remain password protected.
+
+## Fish model pack
+
+The 3D fish models are not included in this repository. They come from a separately purchased model pack whose licence does not permit redistribution.
+
+The conversion tool expects the purchased FBX files under `purchased-fish/fbx/`.
+
+```powershell
+npm install --no-save fbx2gltf
+$env:FBX2GLTF = (Get-ChildItem node_modules -Recurse -Filter FBX2glTF.exe)[0].FullName
+powershell -ExecutionPolicy Bypass -File tools\convert-pack.ps1
+```
+
+The conversion process produces glTF files under `assets/models/pack/`. Textures are reduced to 1024 px JPEGs and model metadata is written to `pack.json`.
+
+The exact model pack is not a hard runtime requirement. Other `.glb` or `.gltf` models can be added manually, but printable sheets must be rebuilt if the species set changes.
+
+## Coloring-sheet tools
+
+| Tool | Purpose |
+|---|---|
+| `tools/silhouettes.html` | Inspect model silhouettes and create contour data |
+| `tools/make-coloring.js` | Generate printable sheets and the manifest |
+| `tools/test-capture.html` | Test marker recognition under skew, rotation, and noise |
+| `tools/convert-pack.ps1` | Convert purchased FBX models to glTF |
+
+The marker generator keeps sufficient Hamming distance between species codes so a single misread cell does not silently turn one fish into another.
+
+## Other models
+
+The runtime can also use your own `.glb` or `.gltf` models under `assets/models/pack/`. Each species needs its own directory and an entry in `pack.json`.
+
+If the species set changes, rebuild the colouring sheets and manifest so the printed contours, marker codes, and model list remain synchronized.
+
+## License
+
+The application code is MIT licensed.
+
+The aquarium background assets included in `assets/backgrounds/` are part of the project. The purchased fish models are not part of the repository and remain subject to their own licence.
+
+The colouring-sheet silhouettes and manifests are derived from the purchased models and should be rebuilt if a different model set is used.
+
+## Fork status
+
+This repository is a maintained fork. Repository-specific names, links, deployment paths, and contact references from the upstream project are intentionally not carried forward.
